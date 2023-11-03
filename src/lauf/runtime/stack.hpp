@@ -117,7 +117,8 @@ public:
     {
         auto cur = _first;
         for (_first = nullptr; cur != nullptr; cur = chunk::deallocate(alloc, cur))
-        {}
+        {
+        }
     }
 
     void* base()
@@ -133,9 +134,9 @@ public:
 
         if (auto cur_chunk = chunk::chunk_of(frame_ptr);
             LAUF_UNLIKELY(frame_ptr->next_offset + callee->max_cstack_size
-                          > cur_chunk->remaining_space(next_frame)))
+                          > cur_chunk->remaining_space(next_frame))) [[unlikely]]
         {
-            if (LAUF_UNLIKELY(cur_chunk->next == nullptr))
+            if (LAUF_UNLIKELY(cur_chunk->next == nullptr)) [[unlikely]]
                 return nullptr;
 
             cur_chunk  = cur_chunk->next;
@@ -222,4 +223,3 @@ private:
 } // namespace lauf
 
 #endif // SRC_LAUF_RUNTIME_STACK_HPP_INCLUDED
-

@@ -186,7 +186,7 @@ public:
 
         if (!_is_heap && arena.try_expand(_ptr, _capacity, new_capacity))
         {
-            _capacity = new_capacity;
+            LAUF_IGNORE_BITFIELD_WARNING(_capacity = new_capacity);
         }
         else
         {
@@ -195,9 +195,9 @@ public:
             if (_is_heap)
                 ::operator delete(_ptr);
 
-            _ptr      = static_cast<T*>(new_memory);
-            _capacity = new_capacity;
-            _is_heap  = true;
+            _ptr = static_cast<T*>(new_memory);
+            LAUF_IGNORE_BITFIELD_WARNING(_capacity = new_capacity);
+            _is_heap = true;
         }
     }
 
@@ -228,7 +228,7 @@ public:
             }
             else
             {
-                _capacity = extended_page_size / sizeof(T);
+                LAUF_IGNORE_BITFIELD_WARNING(_capacity = extended_page_size / sizeof(T));
             }
         }
     }
@@ -241,7 +241,7 @@ public:
     template <typename Allocator>
     void push_back(Allocator& alloc, const T& obj)
     {
-        if (LAUF_UNLIKELY(_size + 1 > _capacity))
+        if (LAUF_UNLIKELY(_size + 1 > _capacity)) [[unlikely]]
             reserve(alloc, _size + 1);
 
         push_back_unchecked(obj);
@@ -293,8 +293,8 @@ private:
     }
     void set_pages(page_block block)
     {
-        _ptr      = static_cast<T*>(block.ptr);
-        _capacity = block.size / sizeof(T);
+        _ptr = static_cast<T*>(block.ptr);
+        LAUF_IGNORE_BITFIELD_WARNING(_capacity = block.size / sizeof(T));
     }
 
     T*          _ptr;
@@ -305,4 +305,3 @@ private:
 } // namespace lauf
 
 #endif // SRC_LAUF_SUPPORT_ARRAY_HPP_INCLUDED
-

@@ -1,6 +1,7 @@
 // Copyright (C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include <lauf/config.h>
 #include <lauf/runtime/stacktrace.h>
 
 #include <lauf/asm/instruction.hpp>
@@ -28,6 +29,8 @@ lauf_runtime_stacktrace* lauf_runtime_get_stacktrace(lauf_runtime_process*     p
         return new lauf_runtime_stacktrace{p->regs.frame_ptr, p->regs.ip};
     case lauf_runtime_fiber::done:
         return nullptr;
+    default:
+        LAUF_UNREACHABLE;
     }
 }
 
@@ -60,4 +63,3 @@ void lauf_runtime_destroy_stacktrace(lauf_runtime_stacktrace* st)
 {
     delete st;
 }
-

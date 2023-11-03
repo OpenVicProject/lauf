@@ -1,6 +1,7 @@
 // Copyright (C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include <lauf/config.h>
 #include <lauf/runtime/memory.hpp>
 
 #include <lauf/asm/module.hpp>
@@ -126,7 +127,7 @@ bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address* all
 lauf_runtime_address lauf_runtime_get_global_address(lauf_runtime_process*,
                                                      const lauf_asm_global* global)
 {
-    return {global->allocation_idx, 0, 0};
+    LAUF_IGNORE_BITFIELD_WARNING(return {global->allocation_idx, 0, 0});
 }
 
 const char* lauf_runtime_get_cstr(lauf_runtime_process* p, lauf_runtime_address addr)
@@ -527,4 +528,3 @@ bool lauf_runtime_undeclare_weak(lauf_runtime_process* p, lauf_runtime_address a
     alloc->is_gc_weak = false;
     return true;
 }
-

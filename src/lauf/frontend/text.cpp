@@ -670,8 +670,10 @@ struct location
     static constexpr auto rule  = dsl::position;
     static constexpr auto value = callback([](parse_state& state, auto pos) {
         auto loc = lexy::get_input_location(state.input->buffer, pos, state.anchor);
-        lauf_asm_build_debug_location(state.builder, {0, std::uint16_t(loc.line_nr()),
-                                                      std::uint16_t(loc.column_nr()), false, 0});
+        LAUF_IGNORE_BITFIELD_WARNING(
+            lauf_asm_build_debug_location(state.builder,
+                                          {0, std::uint16_t(loc.line_nr()),
+                                           std::uint16_t(loc.column_nr()), false, 0}));
         state.anchor = loc.anchor();
     });
 };
@@ -846,4 +848,3 @@ lauf_asm_module* lauf_frontend_text(lauf_reader* reader, lauf_frontend_text_opti
 
     return state.mod;
 }
-
