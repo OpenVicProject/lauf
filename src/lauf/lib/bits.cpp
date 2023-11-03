@@ -51,7 +51,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_bits_shl, 2, 1, panic_flags, "shl", &lauf_lib_bits
     auto n = vstack_ptr[0].as_uint;
     ++vstack_ptr;
 
-    if (LAUF_UNLIKELY(n >= sizeof(lauf_uint) * CHAR_BIT))
+    if (LAUF_UNLIKELY(n >= sizeof(lauf_uint) * CHAR_BIT)) [[unlikely]]
         return lauf_runtime_panic(process, "shift amount too big");
 
     vstack_ptr[0].as_uint = x << n;
@@ -64,7 +64,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_bits_ushr, 2, 1, panic_flags, "ushr", &lauf_lib_bi
     auto n = vstack_ptr[0].as_uint;
     ++vstack_ptr;
 
-    if (LAUF_UNLIKELY(n >= sizeof(lauf_uint) * CHAR_BIT))
+    if (LAUF_UNLIKELY(n >= sizeof(lauf_uint) * CHAR_BIT)) [[unlikely]]
         return lauf_runtime_panic(process, "shift amount too big");
 
     vstack_ptr[0].as_uint = x >> n;
@@ -77,7 +77,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_bits_sshr, 2, 1, panic_flags, "sshr", &lauf_lib_bi
     auto n = vstack_ptr[0].as_uint;
     ++vstack_ptr;
 
-    if (LAUF_UNLIKELY(n >= sizeof(lauf_sint) * CHAR_BIT))
+    if (LAUF_UNLIKELY(n >= sizeof(lauf_sint) * CHAR_BIT)) [[unlikely]]
         return lauf_runtime_panic(process, "shift amount too big");
 
     static_assert(-1 >> 1 == -1, "compiler does not implement arithmetic right shift");
@@ -86,4 +86,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_bits_sshr, 2, 1, panic_flags, "sshr", &lauf_lib_bi
 }
 
 const lauf_runtime_builtin_library lauf_lib_bits = {"lauf.bits", &lauf_lib_bits_sshr, nullptr};
-

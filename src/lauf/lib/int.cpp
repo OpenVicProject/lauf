@@ -22,6 +22,8 @@
             return Name##_sat;                                                                     \
         case LAUF_LIB_INT_OVERFLOW_PANIC:                                                          \
             return Name##_panic;                                                                   \
+        default:                                                                                   \
+            LAUF_UNREACHABLE;                                                                      \
         }                                                                                          \
     }
 
@@ -670,4 +672,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_u64_overflow, 1, 2, no_panic_flags, "u64_overf
 
 const lauf_runtime_builtin_library lauf_lib_int
     = {"lauf.int", &lauf_lib_int_u64_overflow, &lauf_lib_int_u64};
-

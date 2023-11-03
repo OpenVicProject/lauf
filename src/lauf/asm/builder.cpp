@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSL-1.0
 
 #include <lauf/asm/builder.hpp>
+#include <lauf/config.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -372,7 +373,7 @@ LAUF_NOINLINE lauf_asm_inst* emit_body(lauf_asm_inst* ip, lauf_asm_builder* b,
         assert(insts[dest->offset].op() == lauf::asm_op::block);
         auto dest_offset = dest->offset + 1;
 
-        jump->jump.offset = std::int32_t(dest_offset - cur_offset);
+        LAUF_IGNORE_BITFIELD_WARNING(jump->jump.offset = std::int32_t(dest_offset - cur_offset));
     }
 
     return ip;
@@ -437,7 +438,7 @@ void emit_debug_location(lauf_asm_builder* b)
             for (auto loc : block.debug_locations)
             {
                 // We also have the initial block instruction that affects the inst_idx.
-                loc.inst_idx += block.offset + 1;
+                LAUF_IGNORE_CONV_WARNING(loc.inst_idx += block.offset + 1);
                 cont.push_back(arena, loc);
             }
         }
@@ -541,7 +542,7 @@ lauf_asm_local* lauf_asm_build_local(lauf_asm_builder* b, lauf_asm_layout layout
 
         // The offset is the current size, we don't need to worry about alignment.
         offset = std::uint16_t(b->local_allocation_size + sizeof(lauf_runtime_stack_frame));
-        b->local_allocation_size += layout.size;
+        LAUF_IGNORE_CONV_WARNING(b->local_allocation_size += layout.size);
     }
     else
     {
@@ -553,7 +554,7 @@ lauf_asm_local* lauf_asm_build_local(lauf_asm_builder* b, lauf_asm_layout layout
         // for a pointer.
         //  Since `layout.alignment` is a multiple of it (as a power of two bigger than it), and
         //  size a multiple of alignment, `layout.alignment + layout.size` is as well.
-        b->local_allocation_size += layout.alignment + layout.size;
+        LAUF_IGNORE_CONV_WARNING(b->local_allocation_size += layout.alignment + layout.size);
         // Since we don't know the exact alignment offset, we can't compute it statically.
         offset = UINT16_MAX;
     }
@@ -1006,7 +1007,7 @@ void lauf_asm_inst_global_addr(lauf_asm_builder* b, const lauf_asm_global* globa
     b->cur->insts.push_back(*b, LAUF_BUILD_INST_VALUE(global_addr, global->allocation_idx));
     b->cur->vstack.push_constant(*b, [&] {
         lauf_runtime_value result;
-        result.as_address.allocation = global->allocation_idx;
+        LAUF_IGNORE_BITFIELD_WARNING(result.as_address.allocation = global->allocation_idx);
         result.as_address.offset     = 0;
         result.as_address.generation = 0; // Always true for globals.
         return result;
@@ -1381,4 +1382,3 @@ void lauf_asm_inst_store_field(lauf_asm_builder* b, lauf_asm_type type, size_t f
         lauf_asm_inst_call_builtin(b, builtin);
     }
 }
-

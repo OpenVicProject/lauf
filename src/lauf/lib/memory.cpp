@@ -1,6 +1,7 @@
 // Copyright (C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include <lauf/config.h>
 #include <lauf/lib/memory.h>
 
 #include <cstring>
@@ -96,7 +97,7 @@ std::uint32_t addr_offset(lauf_runtime_address addr, lauf_sint offset)
 {
     lauf_sint result;
     auto      overflow = __builtin_add_overflow(lauf_sint(addr.offset), offset, &result);
-    if (LAUF_UNLIKELY(overflow || result < 0 || result > UINT32_MAX))
+    if (LAUF_UNLIKELY(overflow || result < 0 || result > UINT32_MAX)) [[unlikely]]
         result = UINT32_MAX;
 
     return std::uint32_t(result);
@@ -209,6 +210,8 @@ lauf_runtime_builtin lauf_lib_memory_addr_add(lauf_lib_memory_addr_overflow over
         return addr_add_panic;
     case LAUF_LIB_MEMORY_ADDR_OVERFLOW_PANIC_STRICT:
         return addr_add_panic_strict;
+    default:
+        LAUF_UNREACHABLE;
     }
 }
 
@@ -222,6 +225,8 @@ lauf_runtime_builtin lauf_lib_memory_addr_sub(lauf_lib_memory_addr_overflow over
         return addr_sub_panic;
     case LAUF_LIB_MEMORY_ADDR_OVERFLOW_PANIC_STRICT:
         return addr_sub_panic_strict;
+    default:
+        LAUF_UNREACHABLE;
     }
 }
 
@@ -296,4 +301,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_cmp, 3, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "c
 }
 
 const lauf_runtime_builtin_library lauf_lib_memory = {"lauf.memory", &lauf_lib_memory_cmp, nullptr};
-

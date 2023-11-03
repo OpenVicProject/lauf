@@ -1,6 +1,7 @@
 // Copyright (C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include <lauf/config.h>
 #include <lauf/runtime/process.hpp>
 
 #include <lauf/vm.hpp>
@@ -90,7 +91,8 @@ LAUF_NOINLINE void lauf_runtime_process::do_cleanup(lauf_runtime_process* proces
                 // We don't know the full size.
                 vm->heap_allocator.free_alloc(vm->heap_allocator.user_data, alloc.ptr, 0);
             else
-                ; // We don't know the starting address of the allocation.
+            { // We don't know the starting address of the allocation.
+            }
         }
         else if (alloc.source == lauf::allocation_source::fiber_memory)
         {
@@ -155,6 +157,8 @@ lauf_runtime_fiber_status lauf_runtime_get_fiber_status(const lauf_runtime_fiber
         return LAUF_RUNTIME_FIBER_SUSPENDED;
     case lauf_runtime_fiber::running:
         return LAUF_RUNTIME_FIBER_RUNNING;
+    default:
+        LAUF_UNREACHABLE;
     }
 }
 
@@ -212,7 +216,7 @@ bool lauf_runtime_resume(lauf_runtime_process* process, lauf_runtime_fiber* fibe
 
     fiber->resume_by(nullptr);
     process->cur_fiber = fiber;
-    if (LAUF_UNLIKELY(fiber->expected_argument_count != input_count))
+    if (LAUF_UNLIKELY(fiber->expected_argument_count != input_count)) [[unlikely]]
         return lauf_runtime_panic(process, "mismatched signature for fiber resume");
 
     // We can't call fiber->transfer_arguments() as the order is different.
@@ -225,7 +229,7 @@ bool lauf_runtime_resume(lauf_runtime_process* process, lauf_runtime_fiber* fibe
 
     auto success = lauf::execute(fiber->suspension_point.ip + 1, fiber->suspension_point.vstack_ptr,
                                  fiber->suspension_point.frame_ptr, process);
-    if (LAUF_LIKELY(success))
+    if (LAUF_LIKELY(success)) [[likely]]
     {
         // fiber could have changed, so reset back to the current fiber.
         fiber = process->cur_fiber;
@@ -234,7 +238,7 @@ bool lauf_runtime_resume(lauf_runtime_process* process, lauf_runtime_fiber* fibe
         {
             // Copy the final arguments.
             auto actual_output_count = fiber->root_function()->sig.output_count;
-            if (LAUF_UNLIKELY(actual_output_count != output_count))
+            if (LAUF_UNLIKELY(actual_output_count != output_count)) [[unlikely]]
                 return lauf_runtime_panic(process, "mismatched signature for fiber resume");
 
             auto vstack_ptr = fiber->vstack.base() - actual_output_count;
@@ -254,7 +258,7 @@ bool lauf_runtime_resume(lauf_runtime_process* process, lauf_runtime_fiber* fibe
             auto actual_output_count = fiber->suspension_point.ip->fiber_suspend.input_count;
             if (actual_output_count > 0)
             {
-                if (LAUF_UNLIKELY(actual_output_count != output_count))
+                if (LAUF_UNLIKELY(actual_output_count != output_count)) [[unlikely]]
                     return lauf_runtime_panic(process, "mismatched signature for fiber resume");
 
                 auto& vstack_ptr = fiber->suspension_point.vstack_ptr;
@@ -277,6 +281,7 @@ bool lauf_runtime_resume_until_completion(lauf_runtime_process* process, lauf_ru
 
     // Resume the fiber at least once.
     if (LAUF_LIKELY(lauf_runtime_resume(process, fiber, input, input_count, output, output_count)))
+        [[likely]]
     {
         success = true;
 
@@ -284,7 +289,7 @@ bool lauf_runtime_resume_until_completion(lauf_runtime_process* process, lauf_ru
         while (process->cur_fiber->status != lauf_runtime_fiber::done)
         {
             if (LAUF_UNLIKELY(!lauf_runtime_resume(process, process->cur_fiber, nullptr, 0, output,
-                                                   output_count)))
+                                                   output_count))) [[unlikely]]
             {
                 success = false;
                 break;
@@ -302,7 +307,7 @@ bool lauf_runtime_resume_until_completion(lauf_runtime_process* process, lauf_ru
 bool lauf_runtime_destroy_fiber(lauf_runtime_process* process, lauf_runtime_fiber* fiber)
 {
     if (LAUF_UNLIKELY(fiber->status != lauf_runtime_fiber::done
-                      && fiber->status != lauf_runtime_fiber::ready))
+                      && fiber->status != lauf_runtime_fiber::ready)) [[unlikely]]
     {
         assert(fiber->status == lauf_runtime_fiber::suspended);
         // The fiber is being canceled, which means we need to manually mark its local memory as
@@ -323,7 +328,7 @@ bool lauf_runtime_destroy_fiber(lauf_runtime_process* process, lauf_runtime_fibe
                 auto& alloc = process->memory[index];
                 assert(alloc.source == lauf::allocation_source::local_memory);
                 assert(alloc.status != lauf::allocation_status::freed);
-                if (LAUF_UNLIKELY(alloc.split != lauf::allocation_split::unsplit))
+                if (LAUF_UNLIKELY(alloc.split != lauf::allocation_split::unsplit)) [[unlikely]]
                     return lauf_runtime_panic(process, "cannot free split allocation");
 
                 alloc.status = lauf::allocation_status::freed;
@@ -386,4 +391,3 @@ bool lauf_runtime_increment_step(lauf_runtime_process* process)
 
     return true;
 }
-
