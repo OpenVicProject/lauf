@@ -1,6 +1,7 @@
 // Copyright(C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include <lauf/config.h>
 #include <lauf/vm.hpp>
 
 #include <cassert>
@@ -73,6 +74,7 @@ LAUF_NOINLINE bool allocate_more_vstack_space(const lauf_asm_inst*      ip,
 {
     process->cur_fiber->vstack.grow(process->vm->page_allocator, vstack_ptr);
     if (LAUF_UNLIKELY(process->cur_fiber->vstack.capacity() > process->vm->max_vstack_size))
+        [[unlikely]]
         LAUF_DO_PANIC("vstack overflow");
 
     LAUF_VM_DISPATCH;
@@ -85,6 +87,7 @@ LAUF_NOINLINE bool allocate_more_cstack_space(const lauf_asm_inst*      ip,
 {
     process->cur_fiber->cstack.grow(process->vm->page_allocator, frame_ptr);
     if (LAUF_UNLIKELY(process->cur_fiber->cstack.capacity() > process->vm->max_cstack_size))
+        [[unlikely]]
         LAUF_DO_PANIC("cstack overflow");
 
     LAUF_VM_DISPATCH;
@@ -94,12 +97,12 @@ LAUF_NOINLINE bool allocate_more_cstack_space(const lauf_asm_inst*      ip,
     {                                                                                              \
         /* Check that we have enough space left on the vstack. */                                  \
         if (auto remaining = vstack_ptr - process->cur_fiber->vstack.limit();                      \
-            LAUF_UNLIKELY(remaining < (Callee)->max_vstack_size))                                  \
+            LAUF_UNLIKELY(remaining < (Callee)->max_vstack_size)) [[unlikely]]                     \
             LAUF_TAIL_CALL return allocate_more_vstack_space(ip, vstack_ptr, frame_ptr, process);  \
                                                                                                    \
         /* Create a new stack frame. */                                                            \
         auto new_frame = process->cur_fiber->cstack.new_call_frame(frame_ptr, (Callee), ip);       \
-        if (LAUF_UNLIKELY(new_frame == nullptr))                                                   \
+        if (LAUF_UNLIKELY(new_frame == nullptr)) [[unlikely]]                                      \
             LAUF_TAIL_CALL return allocate_more_cstack_space(ip, vstack_ptr, frame_ptr, process);  \
                                                                                                    \
         /* And start executing the function. */                                                    \
@@ -120,7 +123,7 @@ LAUF_NOINLINE bool call_undefined_function(const lauf_asm_inst* ip, lauf_runtime
         return extra == nullptr ? nullptr : extra->find_definition(callee);
     }();
 
-    if (LAUF_UNLIKELY(definition == nullptr))
+    if (LAUF_UNLIKELY(definition == nullptr)) [[unlikely]]
     {
         LAUF_DO_PANIC("calling undefined function");
     }
@@ -174,6 +177,7 @@ LAUF_FORCE_INLINE std::size_t get_global_allocation_idx(lauf_runtime_stack_frame
                                                         std::size_t               base_idx)
 {
     if (auto cur_mod = frame_ptr->function->module; LAUF_LIKELY(cur_mod == process->program._mod))
+        [[likely]]
     {
         return base_idx;
     }
@@ -215,7 +219,7 @@ LAUF_VM_EXECUTE(return_free)
         auto  index = frame_ptr->first_local_alloc + i;
         auto& alloc = process->memory[index];
 
-        if (LAUF_UNLIKELY(alloc.split != lauf::allocation_split::unsplit))
+        if (LAUF_UNLIKELY(alloc.split != lauf::allocation_split::unsplit)) [[unlikely]]
             LAUF_DO_PANIC("cannot free split allocation");
 
         alloc.status = lauf::allocation_status::freed;
@@ -263,7 +267,7 @@ LAUF_VM_EXECUTE(panic)
 LAUF_VM_EXECUTE(panic_if)
 {
     auto condition = vstack_ptr[1].as_uint;
-    if (LAUF_UNLIKELY(condition != 0))
+    if (LAUF_UNLIKELY(condition != 0)) [[unlikely]]
         LAUF_TAIL_CALL return execute_panic(ip, vstack_ptr, frame_ptr, process);
 
     vstack_ptr += 2;
@@ -273,7 +277,7 @@ LAUF_VM_EXECUTE(panic_if)
 
 LAUF_VM_EXECUTE(exit)
 {
-    if (LAUF_UNLIKELY(process == nullptr))
+    if (LAUF_UNLIKELY(process == nullptr)) [[unlikely]]
         // During constant folding, we don't have a process, so check first.
         // We also don't have fibers, so just return.
         return true;
@@ -294,7 +298,7 @@ LAUF_VM_EXECUTE(exit)
     {
         // Transfer values from our vstack.
         if (auto argument_count = std::uint8_t(cur_fiber->vstack.base() - vstack_ptr);
-            LAUF_UNLIKELY(!new_fiber->transfer_arguments(argument_count, vstack_ptr)))
+            LAUF_UNLIKELY(!new_fiber->transfer_arguments(argument_count, vstack_ptr))) [[unlikely]]
             LAUF_DO_PANIC("mismatched signature for fiber resume");
 
         // Switch to parent fiber.
@@ -340,7 +344,7 @@ LAUF_VM_EXECUTE(call)
         = lauf::uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function, ip->call.offset);
 
     // Call an extern implementation if necessary.
-    if (LAUF_UNLIKELY(callee->insts == nullptr))
+    if (LAUF_UNLIKELY(callee->insts == nullptr)) [[unlikely]]
         LAUF_TAIL_CALL return call_undefined_function(ip, vstack_ptr, frame_ptr, process);
 
     LAUF_DO_CALL(callee);
@@ -353,7 +357,7 @@ LAUF_VM_EXECUTE(call_indirect)
     auto callee = lauf_runtime_get_function_ptr(process, ptr,
                                                 {ip->call_indirect.input_count,
                                                  ip->call_indirect.output_count});
-    if (LAUF_UNLIKELY(callee == nullptr))
+    if (LAUF_UNLIKELY(callee == nullptr)) [[unlikely]]
         LAUF_DO_PANIC("invalid function address");
 
     LAUF_DO_CALL(callee);
@@ -370,12 +374,12 @@ LAUF_VM_EXECUTE(fiber_resume)
     auto fiber  = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
-                          && fiber->status != lauf_runtime_fiber::ready)))
+                          && fiber->status != lauf_runtime_fiber::ready))) [[unlikely]]
         LAUF_DO_PANIC("invalid fiber handle");
 
     // Transfer values from our vstack.
     if (auto argument_count = ip->fiber_resume.input_count;
-        LAUF_UNLIKELY(!fiber->transfer_arguments(argument_count, vstack_ptr)))
+        LAUF_UNLIKELY(!fiber->transfer_arguments(argument_count, vstack_ptr))) [[unlikely]]
         LAUF_DO_PANIC("mismatched signature for fiber resume");
     // Remove handle from stack.
     ++vstack_ptr;
@@ -399,12 +403,12 @@ LAUF_VM_EXECUTE(fiber_transfer)
     auto fiber  = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
-                          && fiber->status != lauf_runtime_fiber::ready)))
+                          && fiber->status != lauf_runtime_fiber::ready))) [[unlikely]]
         LAUF_DO_PANIC("invalid fiber handle");
 
     // Transfer values from our vstack.
     if (auto argument_count = ip->fiber_resume.input_count;
-        LAUF_UNLIKELY(!fiber->transfer_arguments(argument_count, vstack_ptr)))
+        LAUF_UNLIKELY(!fiber->transfer_arguments(argument_count, vstack_ptr))) [[unlikely]]
         LAUF_DO_PANIC("mismatched signature for fiber resume");
     // Remove handle from stack.
     ++vstack_ptr;
@@ -427,7 +431,7 @@ LAUF_VM_EXECUTE(fiber_suspend)
     assert(process->cur_fiber->status == lauf_runtime_fiber::running);
     auto cur_fiber = process->cur_fiber;
 
-    if (LAUF_UNLIKELY(!cur_fiber->has_parent()))
+    if (LAUF_UNLIKELY(!cur_fiber->has_parent())) [[unlikely]]
     {
         // We're suspending the main fiber, so return instead.
         cur_fiber->suspend({ip, vstack_ptr, frame_ptr}, ip->fiber_suspend.output_count);
@@ -437,12 +441,12 @@ LAUF_VM_EXECUTE(fiber_suspend)
     else
     {
         auto new_fiber = lauf::get_fiber(process, cur_fiber->parent);
-        if (LAUF_UNLIKELY(new_fiber == nullptr))
+        if (LAUF_UNLIKELY(new_fiber == nullptr)) [[unlikely]]
             LAUF_DO_PANIC("cannot suspend to destroyed parent");
 
         // Transfer values from our vstack.
         if (auto argument_count = ip->fiber_suspend.input_count;
-            LAUF_UNLIKELY(!new_fiber->transfer_arguments(argument_count, vstack_ptr)))
+            LAUF_UNLIKELY(!new_fiber->transfer_arguments(argument_count, vstack_ptr))) [[unlikely]]
             LAUF_DO_PANIC("mismatched signature for fiber resume");
 
         // We resume the parent but without setting its parent (asymmetric).
@@ -498,8 +502,9 @@ LAUF_VM_EXECUTE(global_addr)
 {
     --vstack_ptr;
 
-    vstack_ptr[0].as_address.allocation
-        = get_global_allocation_idx(frame_ptr, process, ip->global_addr.value);
+    LAUF_IGNORE_BITFIELD_WARNING(
+        vstack_ptr[0].as_address.allocation
+        = get_global_allocation_idx(frame_ptr, process, ip->global_addr.value));
     vstack_ptr[0].as_address.offset     = 0;
     vstack_ptr[0].as_address.generation = 0; // Always true for globals.
 
@@ -526,7 +531,8 @@ LAUF_VM_EXECUTE(local_addr)
     auto allocation_idx = frame_ptr->first_local_alloc + ip->local_addr.index;
 
     --vstack_ptr;
-    vstack_ptr[0].as_address.allocation = std::uint32_t(allocation_idx);
+    LAUF_IGNORE_BITFIELD_WARNING(vstack_ptr[0].as_address.allocation
+                                 = std::uint32_t(allocation_idx));
     vstack_ptr[0].as_address.offset     = 0;
     vstack_ptr[0].as_address.generation = frame_ptr->local_generation;
 
@@ -650,7 +656,7 @@ LAUF_VM_EXECUTE(select)
     auto idx = vstack_ptr[0].as_uint;
     ++vstack_ptr;
 
-    if (LAUF_UNLIKELY(idx > ip->select.idx))
+    if (LAUF_UNLIKELY(idx > ip->select.idx)) [[unlikely]]
         LAUF_DO_PANIC("invalid select index");
 
     auto value = vstack_ptr[idx];
@@ -665,12 +671,12 @@ LAUF_VM_EXECUTE(select)
 LAUF_VM_EXECUTE(setup_local_alloc)
 {
     // If necessary, grow the allocation array - this will then tail call back here.
-    if (LAUF_UNLIKELY(process->memory.needs_to_grow(ip->setup_local_alloc.value)))
+    if (LAUF_UNLIKELY(process->memory.needs_to_grow(ip->setup_local_alloc.value))) [[unlikely]]
         LAUF_TAIL_CALL return grow_allocation_array(ip, vstack_ptr, frame_ptr, process);
 
     // Setup the necessary metadata.
-    frame_ptr->first_local_alloc = process->memory.next_index();
-    frame_ptr->local_generation  = process->memory.cur_generation();
+    LAUF_IGNORE_BITFIELD_WARNING(frame_ptr->first_local_alloc = process->memory.next_index());
+    LAUF_IGNORE_BITFIELD_WARNING(frame_ptr->local_generation = process->memory.cur_generation());
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -697,7 +703,8 @@ LAUF_VM_EXECUTE(local_alloc_aligned)
     memory += lauf::align_offset(memory, ip->local_alloc_aligned.alignment());
     // However, to increment the offset we need both alignment and size, as that was the offset
     // computation assumed in the builder.
-    frame_ptr->next_offset += ip->local_alloc_aligned.alignment() + ip->local_alloc.size;
+    LAUF_IGNORE_BITFIELD_WARNING(frame_ptr->next_offset
+                                 += ip->local_alloc_aligned.alignment() + ip->local_alloc.size);
 
     process->memory.new_allocation_unchecked(
         lauf::make_local_alloc(memory, ip->local_alloc.size, frame_ptr->local_generation));
@@ -718,13 +725,13 @@ LAUF_VM_EXECUTE(deref_const)
     auto address = vstack_ptr[0].as_address;
 
     auto alloc = process->memory.try_get(address);
-    if (LAUF_UNLIKELY(alloc == nullptr))
+    if (LAUF_UNLIKELY(alloc == nullptr)) [[unlikely]]
         goto panic;
 
     {
         auto ptr = lauf::checked_offset(*alloc, address,
                                         {ip->deref_const.size, ip->deref_const.alignment()});
-        if (LAUF_UNLIKELY(ptr == nullptr))
+        if (LAUF_UNLIKELY(ptr == nullptr)) [[unlikely]]
             goto panic;
 
         vstack_ptr[0].as_native_ptr = const_cast<void*>(ptr);
@@ -743,12 +750,13 @@ LAUF_VM_EXECUTE(deref_mut)
 
     auto alloc = process->memory.try_get(address);
     if (LAUF_UNLIKELY(alloc == nullptr) || LAUF_UNLIKELY(lauf::is_const(alloc->source)))
+        [[unlikely]]
         goto panic;
 
     {
         auto ptr = lauf::checked_offset(*alloc, address,
                                         {ip->deref_mut.size, ip->deref_mut.alignment()});
-        if (LAUF_UNLIKELY(ptr == nullptr))
+        if (LAUF_UNLIKELY(ptr == nullptr)) [[unlikely]]
             goto panic;
 
         vstack_ptr[0].as_native_ptr = const_cast<void*>(ptr);
@@ -766,7 +774,8 @@ LAUF_VM_EXECUTE(array_element)
     auto address = vstack_ptr[1].as_address;
     auto index   = vstack_ptr[0].as_sint;
 
-    address.offset += lauf_sint(ip->array_element.value) * index;
+    LAUF_IGNORE_BITFIELD_WARNING(
+        LAUF_IGNORE_SIGN_WARNING(address.offset += lauf_sint(ip->array_element.value) * index));
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = address;
@@ -830,4 +839,3 @@ LAUF_VM_EXECUTE(store_global_value)
     ++ip;
     LAUF_VM_DISPATCH;
 }
-

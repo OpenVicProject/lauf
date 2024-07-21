@@ -40,6 +40,8 @@ constexpr bool is_const(allocation_source source)
     case allocation_source::local_memory:
     case allocation_source::heap_memory:
         return false;
+    default:
+        LAUF_UNREACHABLE;
     }
 }
 
@@ -203,13 +205,13 @@ public:
     {
         auto index = _allocations.size();
         _allocations.push_back(allocator, alloc);
-        return {std::uint32_t(index), alloc.generation, 0};
+        LAUF_IGNORE_BITFIELD_WARNING(return {std::uint32_t(index), alloc.generation, 0});
     }
     lauf_runtime_address new_allocation_unchecked(allocation alloc)
     {
         auto index = _allocations.size();
         _allocations.push_back_unchecked(alloc);
-        return {std::uint32_t(index), alloc.generation, 0};
+        LAUF_IGNORE_BITFIELD_WARNING(return {std::uint32_t(index), alloc.generation, 0});
     }
 
     allocation& operator[](std::size_t index)
@@ -277,4 +279,3 @@ private:
 } // namespace lauf
 
 #endif // LAUF_RUNTIME_MEMORY_HPP_INCLUDED
-

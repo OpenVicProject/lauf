@@ -8,7 +8,11 @@
 
 LAUF_HEADER_START
 
+#if defined(__clang__)
 #define LAUF_RUNTIME_BUILTIN_IMPL __attribute__((section("text.lauf_builtin"), aligned(8)))
+#else
+#define LAUF_RUNTIME_BUILTIN_IMPL
+#endif
 
 typedef union lauf_asm_inst             lauf_asm_inst;
 typedef struct lauf_asm_type            lauf_asm_type;
