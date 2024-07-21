@@ -10,7 +10,7 @@ FetchContent_MakeAvailable(doctest)
 add_library(lauf_test_base ${CMAKE_CURRENT_SOURCE_DIR}/doctest_main.cpp)
 target_link_libraries(lauf_test_base PUBLIC foonathan::lauf lauf_warnings doctest)
 target_include_directories(lauf_test_base PUBLIC ../src)
-target_compile_features(lauf_test_base PUBLIC cxx_std_17)
+target_compile_features(lauf_test_base PUBLIC cxx_std_20)
 
 #=== Interface compile check target. ===#
 add_library(lauf_interface_check OBJECT all.c)
