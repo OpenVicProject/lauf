@@ -10,5 +10,5 @@ FetchContent_MakeAvailable(nanobench)
 add_executable(lauf_benchmark_chunk)
 target_sources(lauf_benchmark_chunk PRIVATE chunk.cpp)
 target_link_libraries(lauf_benchmark_chunk PRIVATE foonathan::lauf::core nanobench)
-target_compile_features(lauf_benchmark_chunk PRIVATE cxx_std_17)
+target_compile_features(lauf_benchmark_chunk PRIVATE cxx_std_20)
 
