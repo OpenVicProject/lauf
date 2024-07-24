@@ -12,6 +12,8 @@
 #include <lauf/support/page_allocator.hpp>
 
 //=== stack frame ===//
+; // Resolves clangd bug: https://github.com/clangd/clangd/issues/1167
+#pragma pack(push, 8)
 struct lauf_runtime_stack_frame
 {
     // The current function.
@@ -42,6 +44,7 @@ struct lauf_runtime_stack_frame
         return reinterpret_cast<unsigned char*>(this) + next_offset;
     }
 };
+#pragma pack(pop)
 static_assert(alignof(lauf_runtime_stack_frame) == alignof(void*));
 
 //=== cstack ===//

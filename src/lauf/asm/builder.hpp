@@ -193,6 +193,7 @@ struct lauf_asm_block
     : sig{input_count, 0}, vstack(arena, input_count), terminator(unterminated), next{}
     {}
 };
+static_assert(std::is_trivially_copyable_v<lauf_asm_block>);
 
 struct lauf_asm_local
 {
@@ -260,14 +261,14 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
 #define LAUF_BUILD_ASSERT(Cond, Msg)                                                               \
     do                                                                                             \
     {                                                                                              \
-        if (LAUF_UNLIKELY(!(Cond)))                                                                \
+        if (LAUF_UNLIKELY(!(Cond))) [[unlikely]]                                                   \
             b->error(LAUF_BUILD_ASSERT_CONTEXT, Msg);                                              \
     } while (0)
 
 #define LAUF_BUILD_CHECK_CUR                                                                       \
     do                                                                                             \
     {                                                                                              \
-        if (LAUF_UNLIKELY(b->cur == nullptr))                                                      \
+        if (LAUF_UNLIKELY(b->cur == nullptr)) [[unlikely]]                                         \
             return;                                                                                \
     } while (0)
 
@@ -316,7 +317,7 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
     [&](const char* context, std::size_t value) {                                                  \
         lauf_asm_inst result;                                                                      \
         LAUF_IGNORE_BITFIELD_WARNING(result.Name = {lauf::asm_op::Name, std::uint32_t(value)});    \
-        if (value != result.Name.value)                                                            \
+        if (value != static_cast<std::size_t>(result.Name.value))                                  \
             b->error(context, "invalid value");                                                    \
         return result;                                                                             \
     }(LAUF_BUILD_ASSERT_CONTEXT, Value)

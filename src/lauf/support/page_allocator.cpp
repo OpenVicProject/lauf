@@ -4,8 +4,19 @@
 #include <lauf/support/page_allocator.hpp>
 
 #include <new>
-#include <sys/mman.h>
-#include <unistd.h>
+#ifdef _WIN32
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    include <windows.h>
+#    define MAP_FAILED ((void*)-1)
+#else
+#    include <sys/mman.h>
+#    include <unistd.h>
+#endif
 
 // #define LAUF_PAGE_ALLOCATOR_LOG
 #ifdef LAUF_PAGE_ALLOCATOR_LOG
@@ -39,12 +50,18 @@ struct lauf::page_allocator::free_list_node
 namespace
 {
 const auto real_page_size = [] {
+#ifdef _WIN32
+    auto info = SYSTEM_INFO{};
+    ::GetSystemInfo(&info);
+    auto result = static_cast<std::size_t>(info.dwPageSize);
+#else
     auto result = static_cast<std::size_t>(::sysconf(_SC_PAGE_SIZE));
+#endif
     assert(lauf::page_allocator::page_size <= result);
     assert(result % lauf::page_allocator::page_size == 0);
     return result;
 }();
-}
+} // namespace
 
 lauf::page_block lauf::page_allocator::allocate(std::size_t size)
 {
@@ -67,8 +84,12 @@ lauf::page_block lauf::page_allocator::allocate(std::size_t size)
             return {cur, cur->size};
         }
 
-    // Allocate new set of pages.
+// Allocate new set of pages.
+#ifdef _WIN32
+    auto pages = VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
     auto pages = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
     assert(pages != MAP_FAILED); // NOLINT: macro
     _allocated_bytes += size;
 
@@ -85,7 +106,12 @@ std::size_t lauf::page_allocator::try_extend(page_block block, std::size_t new_s
 
     new_size = round_to_multiple_of_alignment(new_size, real_page_size);
 
+#if defined(_WIN32) || (defined(__APPLE__) && defined(__MACH__))
+    // Windows and Mac does not support the functionality of mremap
+    auto ptr = MAP_FAILED;
+#else
     auto ptr = ::mremap(block.ptr, block.size, new_size, 0);
+#endif
     if (ptr == MAP_FAILED) // NOLINT: macro
     {
         LAUF_PAGE_ALLOCATOR_DO_LOG("try_extend({%p, %zu}, %zu): failed", block.ptr, block.size,
@@ -127,7 +153,11 @@ std::size_t lauf::page_allocator::release()
         auto size = cur->size;
         auto next = cur->next;
 
+#ifdef _WIN32
+        VirtualFree(cur, 0, MEM_RELEASE);
+#else
         ::munmap(cur, size);
+#endif
         _allocated_bytes -= size;
 
         cur = next;
@@ -135,4 +165,3 @@ std::size_t lauf::page_allocator::release()
 
     return _allocated_bytes;
 }
-

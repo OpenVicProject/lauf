@@ -214,7 +214,7 @@ LAUF_VM_EXECUTE(return_)
 }
 LAUF_VM_EXECUTE(return_free)
 {
-    for (auto i = 0u; i != ip->return_free.value; ++i)
+    for (auto i = 0u; i != static_cast<std::uint32_t>(ip->return_free.value); ++i)
     {
         auto  index = frame_ptr->first_local_alloc + i;
         auto& alloc = process->memory[index];
@@ -467,7 +467,7 @@ LAUF_VM_EXECUTE(fiber_suspend)
 LAUF_VM_EXECUTE(push)
 {
     --vstack_ptr;
-    vstack_ptr[0].as_uint = ip->push.value;
+    vstack_ptr[0].as_uint = static_cast<lauf_uint>(ip->push.value);
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -504,7 +504,8 @@ LAUF_VM_EXECUTE(global_addr)
 
     LAUF_IGNORE_BITFIELD_WARNING(
         vstack_ptr[0].as_address.allocation
-        = get_global_allocation_idx(frame_ptr, process, ip->global_addr.value));
+        = get_global_allocation_idx(frame_ptr, process,
+                                    static_cast<std::size_t>(ip->global_addr.value)));
     vstack_ptr[0].as_address.offset     = 0;
     vstack_ptr[0].as_address.generation = 0; // Always true for globals.
 
@@ -671,7 +672,8 @@ LAUF_VM_EXECUTE(select)
 LAUF_VM_EXECUTE(setup_local_alloc)
 {
     // If necessary, grow the allocation array - this will then tail call back here.
-    if (LAUF_UNLIKELY(process->memory.needs_to_grow(ip->setup_local_alloc.value))) [[unlikely]]
+    if (LAUF_UNLIKELY(process->memory.needs_to_grow(
+            static_cast<std::size_t>(ip->setup_local_alloc.value)))) [[unlikely]]
         LAUF_TAIL_CALL return grow_allocation_array(ip, vstack_ptr, frame_ptr, process);
 
     // Setup the necessary metadata.
@@ -714,7 +716,7 @@ LAUF_VM_EXECUTE(local_alloc_aligned)
 }
 LAUF_VM_EXECUTE(local_storage)
 {
-    frame_ptr->next_offset += ip->local_storage.value;
+    frame_ptr->next_offset += static_cast<uint32_t>(ip->local_storage.value);
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -787,7 +789,7 @@ LAUF_VM_EXECUTE(array_element)
 LAUF_VM_EXECUTE(aggregate_member)
 {
     auto address = vstack_ptr[0].as_address;
-    address.offset += ip->aggregate_member.value;
+    address.offset += static_cast<uint32_t>(ip->aggregate_member.value);
     vstack_ptr[0].as_address = address;
 
     ++ip;
@@ -818,8 +820,10 @@ LAUF_VM_EXECUTE(store_local_value)
 
 LAUF_VM_EXECUTE(load_global_value)
 {
-    auto allocation = get_global_allocation_idx(frame_ptr, process, ip->load_global_value.value);
-    auto memory     = process->memory[allocation].ptr;
+    auto allocation
+        = get_global_allocation_idx(frame_ptr, process,
+                                    static_cast<std::size_t>(ip->load_global_value.value));
+    auto memory = process->memory[allocation].ptr;
 
     --vstack_ptr;
     vstack_ptr[0] = *reinterpret_cast<lauf_runtime_value*>(memory);
@@ -830,8 +834,10 @@ LAUF_VM_EXECUTE(load_global_value)
 
 LAUF_VM_EXECUTE(store_global_value)
 {
-    auto allocation = get_global_allocation_idx(frame_ptr, process, ip->store_global_value.value);
-    auto memory     = process->memory[allocation].ptr;
+    auto allocation
+        = get_global_allocation_idx(frame_ptr, process,
+                                    static_cast<std::size_t>(ip->store_global_value.value));
+    auto memory = process->memory[allocation].ptr;
 
     *reinterpret_cast<lauf_runtime_value*>(memory) = vstack_ptr[0];
     ++vstack_ptr;

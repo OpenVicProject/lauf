@@ -53,7 +53,7 @@ void lauf::debug_print_cstack(lauf_runtime_process* process, const lauf_runtime_
         else
         {
             auto addr = lauf_asm_get_instruction_index(fn, ip);
-            std::fprintf(stderr, "       at <%04lx>\n", addr);
+            std::fprintf(stderr, "       at <%04zx>\n", addr);
         }
 
         ++index;
@@ -140,11 +140,11 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_debug_break, 0, 0,
                      LAUF_RUNTIME_BUILTIN_NO_PROCESS | LAUF_RUNTIME_BUILTIN_NO_PANIC, "break",
                      &lauf_lib_debug_print_all_cstacks)
 {
-#if __has_builtin(__builtin_debugtrap)
-    __builtin_debugtrap();
-#elif __has_builtin(__debugbreak)
+#if defined(_MSC_VER)
     __debugbreak();
-#elif defined(_MSC_VER)
+#elif defined(__has_builtin) && __has_builtin(__builtin_debugtrap)
+    __builtin_debugtrap();
+#elif defined(__has_builtin) && __has_builtin(__debugbreak)
     __debugbreak();
 #elif defined(__ARMCC_VERSION)
     __breakpoint(42)
@@ -171,7 +171,9 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_debug_read, 0, 1,
     std::printf("[lauf] debug read: 0x");
 
     --vstack_ptr;
-    std::scanf("%" SCNx64, &vstack_ptr->as_uint);
+    [[maybe_unused]]
+    int _
+        = std::scanf("%" SCNx64, &vstack_ptr->as_uint);
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }

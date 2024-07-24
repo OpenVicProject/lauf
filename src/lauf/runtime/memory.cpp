@@ -296,7 +296,7 @@ size_t lauf_runtime_gc(lauf_runtime_process* p)
         // (We've done a size check already, so the initial offset is fine)
         auto offset = lauf::align_offset(alloc->ptr, alignof(lauf_runtime_value));
         auto ptr    = reinterpret_cast<lauf_runtime_value*>(static_cast<unsigned char*>(alloc->ptr)
-                                                         + offset);
+                                                            + offset);
 
         for (auto end = ptr + (alloc->size - offset) / sizeof(lauf_runtime_value); ptr != end;
              ++ptr)
@@ -432,7 +432,7 @@ bool lauf_runtime_split_allocation(lauf_runtime_process* p, lauf_runtime_address
     // the allocation. Otherwise, it is somewhere in the middle.
     auto new_alloc = *alloc;
     new_alloc.ptr  = static_cast<unsigned char*>(new_alloc.ptr) + addr.offset;
-    new_alloc.size -= addr.offset;
+    new_alloc.size -= static_cast<std::uint32_t>(addr.offset);
     new_alloc.split = alloc->split == lauf::allocation_split::unsplit
                               || alloc->split == lauf::allocation_split::split_last
                           ? lauf::allocation_split::split_last

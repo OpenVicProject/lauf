@@ -539,6 +539,8 @@ LAUF_RUNTIME_BUILTIN_IMPL bool load_int(const lauf_asm_inst* ip, lauf_runtime_va
 
     if constexpr (std::is_unsigned_v<Int>)
         vstack_ptr[1].as_uint = value;
+    else if constexpr (std::is_same_v<Int, signed char>)
+        vstack_ptr[1].as_sint = static_cast<int>(value);
     else
         vstack_ptr[1].as_sint = value;
 
