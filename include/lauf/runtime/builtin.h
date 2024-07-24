@@ -9,9 +9,13 @@
 LAUF_HEADER_START
 
 #if defined(__clang__)
-#define LAUF_RUNTIME_BUILTIN_IMPL __attribute__((section("text.lauf_builtin"), aligned(8)))
+#    if defined(__APPLE__) && defined(__MACH__)
+#        define LAUF_RUNTIME_BUILTIN_IMPL __attribute__((section(".text,lauf_builtin"), aligned(8)))
+#    else
+#        define LAUF_RUNTIME_BUILTIN_IMPL __attribute__((section("text.lauf_builtin"), aligned(8)))
+#    endif
 #else
-#define LAUF_RUNTIME_BUILTIN_IMPL
+#    define LAUF_RUNTIME_BUILTIN_IMPL
 #endif
 
 typedef union lauf_asm_inst             lauf_asm_inst;
@@ -96,4 +100,3 @@ typedef struct lauf_runtime_builtin_library
 LAUF_HEADER_END
 
 #endif // LAUF_RUNTIME_BUILTIN_H_INCLUDED
-

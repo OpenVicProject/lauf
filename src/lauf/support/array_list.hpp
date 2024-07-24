@@ -31,8 +31,8 @@ public:
     array_list() : _first_block(nullptr), _cur_block(nullptr), _next_idx(0), _block_count(0) {}
 
     // For simplicity for now.
-    array_list(const array_list&)            = delete;
-    array_list& operator=(const array_list&) = delete;
+    array_list(const array_list&)            = default;
+    array_list& operator=(const array_list&) = default;
 
     // Arena takes care of deallaction.
     ~array_list() = default;
@@ -306,4 +306,3 @@ private:
 } // namespace lauf
 
 #endif // SRC_LAUF_SUPPORT_ARRAY_LIST_HPP_INCLUDED
-

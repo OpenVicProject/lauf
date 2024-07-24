@@ -92,7 +92,10 @@ std::string find_global_name(const lauf_asm_module* mod, unsigned idx)
         {
             auto name = lauf_asm_global_debug_name(global);
             if (name != nullptr)
-                return "'" + std::string(name) + "'";
+            {
+                using namespace std::string_literals;
+                return "'"s + name + "'"s;
+            }
 
             return "global_" + std::to_string(idx);
         }
@@ -141,7 +144,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             writer->write("return");
             break;
         case lauf::asm_op::return_free:
-            writer->format("return_free %d", ip->return_free.value);
+            writer->format("return_free %d", static_cast<std::int32_t>(ip->return_free.value));
             break;
         case lauf::asm_op::jump:
             writer->format("jump <%04zx>", ip + ip->jump.offset - fn->insts);
@@ -213,19 +216,21 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::push:
-            writer->format("push 0x%X", ip->push.value);
+            writer->format("push 0x%X", static_cast<std::uint32_t>(ip->push.value));
             break;
         case lauf::asm_op::push2:
-            writer->format("push2 0x%X", ip->push2.value);
+            writer->format("push2 0x%X", static_cast<std::uint32_t>(ip->push2.value));
             break;
         case lauf::asm_op::push3:
-            writer->format("push3 0x%X", ip->push3.value);
+            writer->format("push3 0x%X", static_cast<std::uint32_t>(ip->push3.value));
             break;
         case lauf::asm_op::pushn:
-            writer->format("pushn 0x%X", ip->pushn.value);
+            writer->format("pushn 0x%X", static_cast<std::uint32_t>(ip->pushn.value));
             break;
         case lauf::asm_op::global_addr: {
-            writer->format("global_addr @%s", find_global_name(mod, ip->global_addr.value).c_str());
+            writer->format("global_addr @%s",
+                           find_global_name(mod, static_cast<std::uint32_t>(ip->global_addr.value))
+                               .c_str());
             break;
         }
         case lauf::asm_op::function_addr: {
@@ -280,7 +285,8 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::setup_local_alloc:
-            writer->format("setup_local_alloc %u", ip->setup_local_alloc.value);
+            writer->format("setup_local_alloc %u",
+                           static_cast<std::uint32_t>(ip->setup_local_alloc.value));
             break;
         case lauf::asm_op::local_alloc:
             writer->format("local_alloc (%u, %zu)", ip->local_alloc.size,
@@ -291,7 +297,8 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
                            ip->local_alloc_aligned.alignment());
             break;
         case lauf::asm_op::local_storage:
-            writer->format("local_storage (%u, 8)", ip->local_storage.value);
+            writer->format("local_storage (%u, 8)",
+                           static_cast<std::uint32_t>(ip->local_storage.value));
             break;
         case lauf::asm_op::deref_const:
             writer->format("deref_const (%u, %zu)", ip->deref_const.size,
@@ -301,10 +308,12 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             writer->format("deref_mut (%u, %zu)", ip->deref_mut.size, ip->deref_mut.alignment());
             break;
         case lauf::asm_op::array_element:
-            writer->format("array_element [%u]", ip->array_element.value);
+            writer->format("array_element [%u]",
+                           static_cast<std::uint32_t>(ip->array_element.value));
             break;
         case lauf::asm_op::aggregate_member:
-            writer->format("aggregate_member %u", ip->aggregate_member.value);
+            writer->format("aggregate_member %u",
+                           static_cast<std::uint32_t>(ip->aggregate_member.value));
             break;
         case lauf::asm_op::load_local_value:
             writer->format("load_local_value %u <%zx>", ip->load_local_value.index,
@@ -316,11 +325,15 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
         case lauf::asm_op::load_global_value:
             writer->format("load_global_value @%s",
-                           find_global_name(mod, ip->load_global_value.value).c_str());
+                           find_global_name(mod,
+                                            static_cast<std::uint32_t>(ip->load_global_value.value))
+                               .c_str());
             break;
         case lauf::asm_op::store_global_value:
             writer->format("store_global_value @%s",
-                           find_global_name(mod, ip->store_global_value.value).c_str());
+                           find_global_name(mod, static_cast<std::uint32_t>(
+                                                     ip->store_global_value.value))
+                               .c_str());
             break;
 
         case lauf::asm_op::count:
@@ -369,4 +382,3 @@ void lauf_backend_dump_chunk(lauf_writer* writer, lauf_backend_dump_options opti
     dump_module_header(writer, mod);
     dump_function(writer, options, mod, chunk->fn);
 }
-

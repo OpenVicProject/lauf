@@ -1,6 +1,7 @@
 // Copyright (C) 2022-2023 Jonathan Müller and lauf contributors
 // SPDX-License-Identifier: BSL-1.0
 
+#include "lauf/config.h"
 #include <lauf/lib/int.h>
 
 #include <lauf/asm/type.h>
@@ -540,7 +541,7 @@ LAUF_RUNTIME_BUILTIN_IMPL bool load_int(const lauf_asm_inst* ip, lauf_runtime_va
     if constexpr (std::is_unsigned_v<Int>)
         vstack_ptr[1].as_uint = value;
     else
-        vstack_ptr[1].as_sint = value;
+        vstack_ptr[1].as_sint = static_cast<unsigned char>(value);
 
     ++vstack_ptr;
 
