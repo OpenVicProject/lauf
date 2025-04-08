@@ -41,6 +41,7 @@ constexpr bool is_const(allocation_source source)
     case allocation_source::heap_memory:
         return false;
     }
+    LAUF_UNREACHABLE;
 }
 
 enum class allocation_status : std::uint8_t
@@ -203,13 +204,14 @@ public:
     {
         auto index = _allocations.size();
         _allocations.push_back(allocator, alloc);
-        return {std::uint32_t(index), alloc.generation, 0};
+        LAUF_BITFIELD_CONVERSION(return {std::uint32_t(index), alloc.generation, 0});
     }
     lauf_runtime_address new_allocation_unchecked(allocation alloc)
     {
         auto index = _allocations.size();
         _allocations.push_back_unchecked(alloc);
-        return {std::uint32_t(index), alloc.generation, 0};
+        LAUF_BITFIELD_CONVERSION(
+            return lauf_runtime_address{std::uint32_t(index), alloc.generation, 0});
     }
 
     allocation& operator[](std::size_t index)
@@ -277,4 +279,3 @@ private:
 } // namespace lauf
 
 #endif // LAUF_RUNTIME_MEMORY_HPP_INCLUDED
-
