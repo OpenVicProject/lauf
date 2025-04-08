@@ -29,6 +29,7 @@ lauf_runtime_stacktrace* lauf_runtime_get_stacktrace(lauf_runtime_process*     p
     case lauf_runtime_fiber::done:
         return nullptr;
     }
+    LAUF_UNREACHABLE;
 }
 
 const lauf_asm_function* lauf_runtime_stacktrace_function(lauf_runtime_stacktrace* st)
@@ -60,4 +61,3 @@ void lauf_runtime_destroy_stacktrace(lauf_runtime_stacktrace* st)
 {
     delete st;
 }
-

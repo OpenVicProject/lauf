@@ -15,14 +15,14 @@
 
 namespace lauf
 {
-enum class qbe_type
+enum class qbe_type : uint8_t
 {
-    word,
-    long_,
-    single,
-    double_,
-    byte,
-    halfword,
+    word     = 0,
+    long_    = 1,
+    single   = 2,
+    double_  = 3,
+    byte     = 4,
+    halfword = 5,
 
     value = long_,
 };
@@ -62,7 +62,7 @@ enum class qbe_block : std::size_t
 {
 };
 
-enum class qbe_cc
+enum class qbe_cc : uint8_t
 {
     ieq,
     ine,
@@ -426,6 +426,7 @@ private:
         case qbe_type::halfword:
             return "h";
         }
+        LAUF_UNREACHABLE;
     }
 
     const char* cc_name(qbe_cc cc)
@@ -453,6 +454,7 @@ private:
         case qbe_cc::ugt:
             return "ugt";
         }
+        LAUF_UNREACHABLE;
     }
 
     lauf_writer*                                 _writer;
@@ -462,4 +464,3 @@ private:
 } // namespace lauf
 
 #endif // SRC_LAUF_BACKEND_QBE_HPP_INCLUDED
-

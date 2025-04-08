@@ -4,6 +4,7 @@
 #ifndef SRC_LAUF_ASM_BUILDER_HPP_INCLUDED
 #define SRC_LAUF_ASM_BUILDER_HPP_INCLUDED
 
+#include <algorithm>
 #include <lauf/asm/builder.h>
 #include <lauf/asm/instruction.hpp>
 #include <lauf/asm/module.hpp>
@@ -32,7 +33,7 @@ class builder_vstack
 public:
     struct value
     {
-        enum type_t
+        enum type_t : uint8_t
         {
             unknown,
             constant,
@@ -66,8 +67,7 @@ public:
     void push(arena_base& arena, value v)
     {
         _stack.push_back(arena, v);
-        if (size() > _max)
-            _max = size();
+        _max = std::max(size(), _max);
     }
     void push_output(arena_base& arena, std::size_t n)
     {
@@ -176,7 +176,7 @@ struct lauf_asm_block
     lauf::array_list<lauf_asm_inst>             insts;
     lauf::array_list<lauf::inst_debug_location> debug_locations;
 
-    enum
+    enum : uint8_t
     {
         unterminated,
         terminated,
@@ -262,14 +262,14 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
     {                                                                                              \
         if (LAUF_UNLIKELY(!(Cond)))                                                                \
             b->error(LAUF_BUILD_ASSERT_CONTEXT, Msg);                                              \
-    } while (0)
+    } while (false)
 
 #define LAUF_BUILD_CHECK_CUR                                                                       \
     do                                                                                             \
     {                                                                                              \
         if (LAUF_UNLIKELY(b->cur == nullptr))                                                      \
             return;                                                                                \
-    } while (0)
+    } while (false)
 
 //=== instruction building ===//
 #define LAUF_BUILD_INST_NONE(Name)                                                                 \
@@ -282,7 +282,7 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
 #define LAUF_BUILD_INST_OFFSET(Name, Offset)                                                       \
     [&](const char* context, std::ptrdiff_t offset) {                                              \
         lauf_asm_inst result;                                                                      \
-        result.Name = {lauf::asm_op::Name, std::int32_t(offset)};                                  \
+        LAUF_BITFIELD_CONVERSION(result.Name = {lauf::asm_op::Name, std::int32_t(offset)});        \
         if (result.Name.offset != offset)                                                          \
             b->error(context, "offset too big");                                                   \
         return result;                                                                             \
@@ -315,7 +315,7 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
 #define LAUF_BUILD_INST_VALUE(Name, Value)                                                         \
     [&](const char* context, std::size_t value) {                                                  \
         lauf_asm_inst result;                                                                      \
-        result.Name = {lauf::asm_op::Name, std::uint32_t(value)};                                  \
+        LAUF_BITFIELD_CONVERSION(result.Name = {lauf::asm_op::Name, std::uint32_t(value)});        \
         if (value != result.Name.value)                                                            \
             b->error(context, "invalid value");                                                    \
         return result;                                                                             \
@@ -331,4 +331,3 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
     }(LAUF_BUILD_ASSERT_CONTEXT, Index)
 
 #endif // SRC_LAUF_ASM_BUILDER_HPP_INCLUDED
-

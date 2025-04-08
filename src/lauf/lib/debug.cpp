@@ -140,7 +140,11 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_debug_break, 0, 0,
                      LAUF_RUNTIME_BUILTIN_NO_PROCESS | LAUF_RUNTIME_BUILTIN_NO_PANIC, "break",
                      &lauf_lib_debug_print_all_cstacks)
 {
+#if defined(__clang__)
     __builtin_debugtrap();
+#elif defined(__STDC_HOSTED__) && (__STDC_HOSTED__ == 0) && defined(__GNUC__)
+    __builtin_trap();
+#endif
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
@@ -151,10 +155,9 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_debug_read, 0, 1,
     std::printf("[lauf] debug read: 0x");
 
     --vstack_ptr;
-    std::scanf("%" SCNx64, &vstack_ptr->as_uint);
+    [[maybe_unused]] auto _ = std::scanf("%" SCNx64, &vstack_ptr->as_uint);
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
 const lauf_runtime_builtin_library lauf_lib_debug = {"lauf.debug", &lauf_lib_debug_read, nullptr};
-

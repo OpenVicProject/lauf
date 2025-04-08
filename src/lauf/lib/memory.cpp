@@ -210,6 +210,7 @@ lauf_runtime_builtin lauf_lib_memory_addr_add(lauf_lib_memory_addr_overflow over
     case LAUF_LIB_MEMORY_ADDR_OVERFLOW_PANIC_STRICT:
         return addr_add_panic_strict;
     }
+    LAUF_UNREACHABLE;
 }
 
 lauf_runtime_builtin lauf_lib_memory_addr_sub(lauf_lib_memory_addr_overflow overflow)
@@ -223,6 +224,7 @@ lauf_runtime_builtin lauf_lib_memory_addr_sub(lauf_lib_memory_addr_overflow over
     case LAUF_LIB_MEMORY_ADDR_OVERFLOW_PANIC_STRICT:
         return addr_sub_panic_strict;
     }
+    LAUF_UNREACHABLE;
 }
 
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_distance, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
@@ -296,4 +298,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_cmp, 3, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "c
 }
 
 const lauf_runtime_builtin_library lauf_lib_memory = {"lauf.memory", &lauf_lib_memory_cmp, nullptr};
-
