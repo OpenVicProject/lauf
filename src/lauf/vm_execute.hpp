@@ -79,10 +79,9 @@ extern "C" [[gnu::always_inline]] inline LAUF_BUILTIN_RETURN_TYPE
                                          lauf_runtime_stack_frame* frame_ptr,
                                          lauf_runtime_process*     process)
 #else
-inline LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_dispatch(const lauf_asm_inst*      ip,
-                                                              lauf_runtime_value*       vstack_ptr,
-                                                              lauf_runtime_stack_frame* frame_ptr,
-                                                              lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL inline LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_dispatch(
+    const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr, lauf_runtime_stack_frame* frame_ptr,
+    lauf_runtime_process* process)
 
 #endif
 {

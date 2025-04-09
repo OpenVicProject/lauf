@@ -12,6 +12,7 @@ typedef struct lauf_asm_function             lauf_asm_function;
 typedef struct lauf_asm_global               lauf_asm_global;
 typedef struct lauf_asm_layout               lauf_asm_layout;
 typedef struct lauf_asm_signature            lauf_asm_signature;
+typedef struct lauf_runtime_address_store    lauf_runtime_address_store;
 typedef struct lauf_runtime_address          lauf_runtime_address;
 typedef struct lauf_runtime_fiber            lauf_runtime_fiber;
 typedef struct lauf_runtime_function_address lauf_runtime_function_address;
@@ -35,7 +36,7 @@ const char* lauf_runtime_get_cstr(lauf_runtime_process* p, lauf_runtime_address 
 
 /// Gets the address for a native pointer of the specified allocation.
 /// On success, updates `allocation` to the actual address.
-bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address* allocation,
+bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address_store* allocation,
                               const void* ptr);
 
 /// Returns the address of a global variable of the process.
@@ -132,7 +133,8 @@ bool lauf_runtime_unpoison_allocation(lauf_runtime_process* p, lauf_runtime_addr
 /// Existing addresses for `a` are only valid if their offset is `< o`; otherwise, they become
 /// invalidated. Neither `a` nor `a'` can be freed until the allocation has been merged again.
 bool lauf_runtime_split_allocation(lauf_runtime_process* p, lauf_runtime_address addr,
-                                   lauf_runtime_address* addr1, lauf_runtime_address* addr2);
+                                   lauf_runtime_address_store* addr1,
+                                   lauf_runtime_address_store* addr2);
 
 /// Merges an allocation that has been previously split.
 ///
@@ -162,4 +164,3 @@ bool lauf_runtime_undeclare_weak(lauf_runtime_process* p, lauf_runtime_address a
 LAUF_HEADER_END
 
 #endif // LAUF_RUNTIME_MEMORY_H_INCLUDED
-

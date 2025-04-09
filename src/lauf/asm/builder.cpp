@@ -459,7 +459,7 @@ void emit_debug_location(lauf_asm_builder* b)
 
 bool lauf_asm_build_finish(lauf_asm_builder* b)
 {
-    constexpr auto context = LAUF_BUILD_ASSERT_CONTEXT;
+    static constexpr auto context = LAUF_BUILD_ASSERT_CONTEXT;
 
     auto insts = [&] {
         auto inst_count = estimate_inst_count(context, b);
@@ -1021,10 +1021,12 @@ void lauf_asm_inst_global_addr(lauf_asm_builder* b, const lauf_asm_global* globa
 
     b->cur->insts.push_back(*b, LAUF_BUILD_INST_VALUE(global_addr, global->allocation_idx));
     b->cur->vstack.push_constant(*b, [&] {
-        lauf_runtime_value result;
-        LAUF_BITFIELD_CONVERSION(result.as_address.allocation = global->allocation_idx);
-        result.as_address.offset     = 0;
-        result.as_address.generation = 0; // Always true for globals.
+        lauf_runtime_value   result;
+        lauf_runtime_address addr;
+        LAUF_BITFIELD_CONVERSION(addr.allocation = global->allocation_idx);
+        addr.offset       = 0;
+        addr.generation   = 0; // Always true for globals.
+        result.as_address = lauf_runtime_address_to_store(addr);
         return result;
     }());
 }
@@ -1288,7 +1290,7 @@ load_store_constant load_store_constant_folding(lauf_asm_module*            mod,
         // TOCTOU is okay, we just can't constant fold because of it.
         auto globals = lauf::get_globals(mod);
 
-        auto constant_addr = addr.as_constant.as_address;
+        auto constant_addr = lauf_runtime_address_from_store(addr.as_constant.as_address);
         if (constant_addr.allocation >= globals.count && constant_addr.generation != 0
             && constant_addr.offset != 0)
             return load_store_dynamic;
@@ -1330,8 +1332,10 @@ void lauf_asm_inst_load_field(lauf_asm_builder* b, lauf_asm_type type, size_t fi
     else if (constant_folding == load_store_global)
     {
         add_pop_top_n(b, 1);
-        b->cur->insts.push_back(*b, LAUF_BUILD_INST_VALUE(load_global_value,
-                                                          addr->as_constant.as_address.allocation));
+        b->cur->insts.push_back(       //
+            *b, LAUF_BUILD_INST_VALUE( //
+                    load_global_value,
+                    lauf_runtime_address_from_store(addr->as_constant.as_address).allocation));
         b->cur->vstack.push_output(*b, 1);
     }
     else if (type.layout.size == 0 && type.load_fn == nullptr)
@@ -1374,8 +1378,10 @@ void lauf_asm_inst_store_field(lauf_asm_builder* b, lauf_asm_type type, size_t f
     else if (constant_folding == load_store_global)
     {
         add_pop_top_n(b, 1);
-        b->cur->insts.push_back(*b, LAUF_BUILD_INST_VALUE(store_global_value,
-                                                          addr->as_constant.as_address.allocation));
+        b->cur->insts.push_back(       //
+            *b, LAUF_BUILD_INST_VALUE( //
+                    store_global_value,
+                    lauf_runtime_address_from_store(addr->as_constant.as_address).allocation));
         LAUF_BUILD_ASSERT(b->cur->vstack.pop(1), "missing value");
     }
     else if (type.layout.size == 0 && type.store_fn == nullptr)

@@ -866,4 +866,3 @@ void lauf_backend_qbe(lauf_writer* _writer, lauf_backend_qbe_options options,
 
     std::move(writer).finish(_writer);
 }
-

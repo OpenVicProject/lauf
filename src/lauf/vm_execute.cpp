@@ -271,7 +271,8 @@ LAUF_VM_EXECUTE_BRANCH(gt, >)
 
 LAUF_VM_EXECUTE(panic)
 {
-    auto msg = lauf_runtime_get_cstr(process, vstack_ptr[0].as_address);
+    auto msg
+        = lauf_runtime_get_cstr(process, lauf_runtime_address_from_store(vstack_ptr[0].as_address));
     LAUF_DO_PANIC(msg);
 }
 
@@ -389,8 +390,9 @@ LAUF_VM_EXECUTE(call_indirect)
 //=== fiber instructions ===//
 LAUF_VM_EXECUTE(fiber_resume)
 {
-    auto handle = vstack_ptr[ip->fiber_resume.input_count].as_address;
-    auto fiber  = lauf::get_fiber(process, handle);
+    auto handle
+        = lauf_runtime_address_from_store(vstack_ptr[ip->fiber_resume.input_count].as_address);
+    auto fiber = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
                           && fiber->status != lauf_runtime_fiber::ready)))
@@ -418,8 +420,9 @@ LAUF_VM_EXECUTE(fiber_resume)
 
 LAUF_VM_EXECUTE(fiber_transfer)
 {
-    auto handle = vstack_ptr[ip->fiber_transfer.input_count].as_address;
-    auto fiber  = lauf::get_fiber(process, handle);
+    auto handle
+        = lauf_runtime_address_from_store(vstack_ptr[ip->fiber_transfer.input_count].as_address);
+    auto fiber = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
                           && fiber->status != lauf_runtime_fiber::ready)))
@@ -521,11 +524,13 @@ LAUF_VM_EXECUTE(global_addr)
 {
     --vstack_ptr;
 
-    LAUF_BITFIELD_CONVERSION(
-        vstack_ptr[0].as_address.allocation
-        = get_global_allocation_idx(frame_ptr, process, ip->global_addr.value));
-    vstack_ptr[0].as_address.offset     = 0;
-    vstack_ptr[0].as_address.generation = 0; // Always true for globals.
+    // Sets offset and generation to 0
+    // generation always 0 for globals.
+    vstack_ptr->as_address.value = 0;
+    lauf_runtime_address_store_set_allocation( //
+        &vstack_ptr[0].as_address,
+        static_cast<uint32_t>(
+            get_global_allocation_idx(frame_ptr, process, ip->global_addr.value)));
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -550,9 +555,8 @@ LAUF_VM_EXECUTE(local_addr)
     auto allocation_idx = frame_ptr->first_local_alloc + ip->local_addr.index;
 
     --vstack_ptr;
-    LAUF_BITFIELD_CONVERSION(vstack_ptr[0].as_address.allocation = std::uint32_t(allocation_idx));
-    vstack_ptr[0].as_address.offset     = 0;
-    vstack_ptr[0].as_address.generation = frame_ptr->local_generation;
+    LAUF_BITFIELD_CONVERSION(vstack_ptr[0].as_address = lauf_runtime_address_to_store(
+                                 {std::uint32_t(allocation_idx), frame_ptr->local_generation, 0}));
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -740,7 +744,7 @@ LAUF_VM_EXECUTE(local_storage)
 
 LAUF_VM_EXECUTE(deref_const)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     auto alloc = process->memory.try_get(address);
     if (LAUF_UNLIKELY(alloc == nullptr))
@@ -764,7 +768,7 @@ panic:
 
 LAUF_VM_EXECUTE(deref_mut)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     auto alloc = process->memory.try_get(address);
     if (LAUF_UNLIKELY(alloc == nullptr) || LAUF_UNLIKELY(lauf::is_const(alloc->source)))
@@ -788,13 +792,13 @@ panic:
 
 LAUF_VM_EXECUTE(array_element)
 {
-    auto address = vstack_ptr[1].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto index   = vstack_ptr[0].as_sint;
 
     address.offset += static_cast<uint32_t>(lauf_sint(ip->array_element.value) * index);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = address;
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(address);
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -802,9 +806,9 @@ LAUF_VM_EXECUTE(array_element)
 
 LAUF_VM_EXECUTE(aggregate_member)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     address.offset += ip->aggregate_member.value;
-    vstack_ptr[0].as_address = address;
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(address);
 
     ++ip;
     LAUF_VM_DISPATCH;

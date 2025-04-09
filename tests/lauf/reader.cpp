@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <doctest/doctest.h>
+#include <iostream>
 #include <lauf/reader.hpp>
 #include <lauf/writer.hpp>
 #include <string_view>
@@ -52,4 +53,3 @@ TEST_CASE("file reader")
 
     std::remove(test_path);
 }
-
