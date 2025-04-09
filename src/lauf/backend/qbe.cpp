@@ -233,7 +233,8 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
         }
 
         case lauf::asm_op::call: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee
+                = lauf::new_uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
             write_call(callee->name, callee->sig.input_count, callee->sig.output_count);
             break;
         }
@@ -244,7 +245,7 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
         case lauf::asm_op::call_builtin:
         case lauf::asm_op::call_builtin_no_regs: {
             assert(ip[1].op() == lauf::asm_op::call_builtin_sig);
-            auto callee = lauf::uncompress_pointer_offset<lauf_runtime_builtin_impl> //
+            auto callee = lauf::new_uncompress_pointer_offset<lauf_runtime_builtin_impl> //
                 (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset);
             auto metadata = ip[1].call_builtin_sig;
 
@@ -692,7 +693,8 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             break;
         case lauf::asm_op::function_addr: {
             auto callee
-                = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->function_addr.offset);
+                = lauf::new_uncompress_pointer_offset<lauf_asm_function>(fn,
+                                                                         ip->function_addr.offset);
             writer.copy(push_reg(), lauf::qbe_type::value, callee->name);
             break;
         }
@@ -866,4 +868,3 @@ void lauf_backend_qbe(lauf_writer* _writer, lauf_backend_qbe_options options,
 
     std::move(writer).finish(_writer);
 }
-

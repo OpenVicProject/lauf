@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <lauf/asm/type.h>
+#include <lauf/compiler_instrinsics.hpp>
 #include <lauf/runtime/builtin.h>
 #include <lauf/runtime/memory.h>
 #include <lauf/runtime/process.h>
@@ -13,7 +14,7 @@
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_poison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE, "poison",
                      nullptr)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_poison_allocation(process, address))
@@ -25,7 +26,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_poison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIREC
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_unpoison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE, "unpoison",
                      &lauf_lib_memory_poison)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_unpoison_allocation(process, address))
@@ -37,7 +38,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_unpoison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIR
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_split, 1, 2, LAUF_RUNTIME_BUILTIN_DEFAULT, "split",
                      &lauf_lib_memory_unpoison)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     --vstack_ptr;
     if (!lauf_runtime_split_allocation(process, addr, &vstack_ptr[1].as_address,
@@ -50,8 +51,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_split, 1, 2, LAUF_RUNTIME_BUILTIN_DEFAULT, 
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_merge, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "merge",
                      &lauf_lib_memory_split)
 {
-    auto addr1 = vstack_ptr[1].as_address;
-    auto addr2 = vstack_ptr[0].as_address;
+    auto addr1 = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
+    auto addr2 = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_merge_allocation(process, addr1, addr2))
@@ -63,12 +64,12 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_merge, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, 
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_to_int, 1, 2, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_to_int",
                      &lauf_lib_memory_merge)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     auto ptr = lauf_runtime_get_const_ptr(process, addr, {0, 1});
     if (ptr == nullptr)
         LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
-    auto provenance = lauf_runtime_address{addr.allocation, addr.generation, 0};
+    auto provenance = lauf_runtime_address_to_store({addr.allocation, addr.generation, 0});
 
     --vstack_ptr;
     vstack_ptr[1].as_address = provenance;
@@ -95,7 +96,7 @@ namespace
 std::uint32_t addr_offset(lauf_runtime_address addr, lauf_sint offset)
 {
     lauf_sint result;
-    auto      overflow = __builtin_add_overflow(lauf_sint(addr.offset), offset, &result);
+    auto      overflow = lauf_add_overflow(lauf_sint(addr.offset), offset, &result);
     if (LAUF_UNLIKELY(overflow || result < 0 || result > UINT32_MAX))
         result = UINT32_MAX;
 
@@ -119,19 +120,20 @@ bool validate_addr_offset(lauf_runtime_process* process, lauf_runtime_address ad
 LAUF_RUNTIME_BUILTIN(addr_add_invalidate, 2, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC,
                      "addr_add_invalidate", &lauf_lib_memory_int_to_addr)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, offset);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    vstack_ptr[0].as_address
+        = lauf_runtime_address_to_store({addr.allocation, addr.generation, new_offset});
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 LAUF_RUNTIME_BUILTIN(addr_add_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_add_panic",
                      &addr_add_invalidate)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, offset);
@@ -139,13 +141,14 @@ LAUF_RUNTIME_BUILTIN(addr_add_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_a
         LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    vstack_ptr[0].as_address
+        = lauf_runtime_address_to_store({addr.allocation, addr.generation, new_offset});
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 LAUF_RUNTIME_BUILTIN(addr_add_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
                      "addr_add_panic_strict", &addr_add_panic)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, offset);
@@ -153,26 +156,26 @@ LAUF_RUNTIME_BUILTIN(addr_add_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
         LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    lauf_runtime_address_store_set_offset(&vstack_ptr[0].as_address, new_offset);
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
 LAUF_RUNTIME_BUILTIN(addr_sub_invalidate, 2, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC,
                      "addr_sub_invalidate", &addr_add_panic_strict)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, -offset);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    lauf_runtime_address_store_set_offset(&vstack_ptr[0].as_address, new_offset);
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 LAUF_RUNTIME_BUILTIN(addr_sub_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_sub_panic",
                      &addr_sub_invalidate)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, -offset);
@@ -180,13 +183,13 @@ LAUF_RUNTIME_BUILTIN(addr_sub_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_s
         LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    lauf_runtime_address_store_set_offset(&vstack_ptr[0].as_address, new_offset);
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 LAUF_RUNTIME_BUILTIN(addr_sub_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
                      "addr_sub_panic_strict", &addr_sub_panic)
 {
-    auto addr   = vstack_ptr[1].as_address;
+    auto addr   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto offset = vstack_ptr[0].as_sint;
 
     auto new_offset = addr_offset(addr, -offset);
@@ -194,7 +197,7 @@ LAUF_RUNTIME_BUILTIN(addr_sub_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
         LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
+    lauf_runtime_address_store_set_offset(&vstack_ptr[0].as_address, new_offset);
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 } // namespace
@@ -230,8 +233,8 @@ lauf_runtime_builtin lauf_lib_memory_addr_sub(lauf_lib_memory_addr_overflow over
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_distance, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
                      "addr_distance", &addr_sub_panic_strict)
 {
-    auto lhs = vstack_ptr[1].as_address;
-    auto rhs = vstack_ptr[0].as_address;
+    auto lhs = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
+    auto rhs = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     if (lhs.allocation != rhs.allocation || lhs.generation != rhs.generation)
         LAUF_BUILTIN_RETURN(
@@ -247,8 +250,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_distance, 2, 1, LAUF_RUNTIME_BUILTIN_D
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_copy, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "copy",
                      &lauf_lib_memory_addr_distance)
 {
-    auto dest  = vstack_ptr[2].as_address;
-    auto src   = vstack_ptr[1].as_address;
+    auto dest  = lauf_runtime_address_from_store(vstack_ptr[2].as_address);
+    auto src   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto count = vstack_ptr[0].as_uint;
 
     auto dest_ptr = lauf_runtime_get_mut_ptr(process, dest, {count, 1});
@@ -265,7 +268,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_copy, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_fill, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "fill",
                      &lauf_lib_memory_copy)
 {
-    auto dest  = vstack_ptr[2].as_address;
+    auto dest  = lauf_runtime_address_from_store(vstack_ptr[2].as_address);
     auto byte  = vstack_ptr[1].as_uint;
     auto count = vstack_ptr[0].as_uint;
 
@@ -282,8 +285,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_fill, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "
 LAUF_RUNTIME_BUILTIN(lauf_lib_memory_cmp, 3, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "cmp",
                      &lauf_lib_memory_fill)
 {
-    auto lhs   = vstack_ptr[2].as_address;
-    auto rhs   = vstack_ptr[1].as_address;
+    auto lhs   = lauf_runtime_address_from_store(vstack_ptr[2].as_address);
+    auto rhs   = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto count = vstack_ptr[0].as_uint;
 
     auto lhs_ptr = lauf_runtime_get_const_ptr(process, lhs, {count, 1});

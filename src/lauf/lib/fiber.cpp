@@ -17,7 +17,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_create, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, 
         LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid function address"));
 
     auto fiber               = lauf_runtime_create_fiber(process, fn);
-    vstack_ptr[0].as_address = lauf_runtime_get_fiber_handle(fiber);
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(lauf_runtime_get_fiber_handle(fiber));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -25,7 +25,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_create, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, 
 LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_destroy, 1, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "destroy",
                      &lauf_lib_fiber_create)
 {
-    auto handle = vstack_ptr[0].as_address;
+    auto handle = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     auto fiber = lauf_runtime_get_fiber_ptr(process, handle);
@@ -44,7 +44,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_current, 0, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC
     auto fiber = lauf_runtime_get_current_fiber(process);
 
     --vstack_ptr;
-    vstack_ptr[0].as_address = lauf_runtime_get_fiber_handle(fiber);
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(lauf_runtime_get_fiber_handle(fiber));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -57,9 +57,10 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_parent, 0, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC,
 
     --vstack_ptr;
     if (parent != nullptr)
-        vstack_ptr[0].as_address = lauf_runtime_get_fiber_handle(parent);
+        vstack_ptr[0].as_address
+            = lauf_runtime_address_to_store(lauf_runtime_get_fiber_handle(parent));
     else
-        vstack_ptr[0].as_address = lauf_runtime_address_null;
+        vstack_ptr[0].as_address = lauf_runtime_address_to_store(lauf_runtime_address_null);
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -67,7 +68,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_parent, 0, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC,
 LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_done, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "done",
                      &lauf_lib_fiber_parent)
 {
-    auto handle = vstack_ptr[0].as_address;
+    auto handle = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     auto fiber  = lauf_runtime_get_fiber_ptr(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr))
         LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid fiber handle"));

@@ -175,7 +175,8 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::call: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee
+                = lauf::new_uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
             writer->format("call @'%s'", callee->name);
             break;
         }
@@ -185,7 +186,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
         }
         case lauf::asm_op::call_builtin:
         case lauf::asm_op::call_builtin_no_regs: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_runtime_builtin_impl> //
+            auto callee = lauf::new_uncompress_pointer_offset<lauf_runtime_builtin_impl> //
                 (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset);
             if (auto name = find_builtin_name(opts, callee); !name.empty())
                 writer->format("$'%s'", name.c_str());
@@ -229,7 +230,8 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
         }
         case lauf::asm_op::function_addr: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee
+                = lauf::new_uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
             writer->format("function_addr @'%s'", callee->name);
             break;
         }
@@ -369,4 +371,3 @@ void lauf_backend_dump_chunk(lauf_writer* writer, lauf_backend_dump_options opti
     dump_module_header(writer, mod);
     dump_function(writer, options, mod, chunk->fn);
 }
-
