@@ -839,12 +839,26 @@ void lauf_asm_inst_call_builtin(lauf_asm_builder* b, lauf_runtime_builtin_functi
         && (callee.flags & LAUF_RUNTIME_BUILTIN_CONSTANT_FOLD) != 0)
     {
         assert(vstack_ptr == vstack + UINT8_MAX);
-        lauf_asm_inst         code[3] = {LAUF_BUILD_INST_NONE(nop),
-                                         LAUF_BUILD_INST_SIGNATURE(call_builtin_sig, callee.input_count,
-                                                                   callee.output_count, callee.flags),
-                                         LAUF_BUILD_INST_NONE(exit)};
+        lauf_asm_inst code[3] = {LAUF_BUILD_INST_NONE(nop),
+                                 LAUF_BUILD_INST_SIGNATURE(call_builtin_sig, callee.input_count,
+                                                           callee.output_count, callee.flags),
+                                 LAUF_BUILD_INST_NONE(exit)};
+
+#if LAUF_HAS_TAIL_CALL_ELIMINATION
         [[maybe_unused]] auto success
             = callee.impl(code, vstack_ptr - callee.input_count, nullptr, nullptr);
+#else
+        LAUF_BUILTIN_RETURN_TYPE tail_call_result
+            = callee.impl(code, vstack_ptr - callee.input_count, nullptr, nullptr);
+        while (tail_call_result.function.is_function)
+        {
+            tail_call_result
+                = tail_call_result.function.next_func(tail_call_result.function.cur_ip,
+                                                      tail_call_result.function.cur_stack_ptr,
+                                                      nullptr, nullptr);
+        }
+        [[maybe_unused]] bool success = tail_call_result.value.value;
+#endif
         if (success)
         {
             // Pop the input values as the call would.

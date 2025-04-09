@@ -3,6 +3,7 @@
 
 #include <lauf/asm/type.h>
 
+#include <algorithm>
 #include <lauf/runtime/builtin.h>
 #include <lauf/runtime/value.h>
 #include <lauf/support/align.hpp>
@@ -25,17 +26,17 @@ lauf_asm_layout lauf_asm_aggregate_layout(const lauf_asm_layout* member_layouts,
         size += lauf::align_offset(size, member_layouts[i].alignment);
         size += member_layouts[i].size;
 
-        if (member_layouts[i].alignment > alignment)
-            alignment = member_layouts[i].alignment;
+        alignment = std::max(member_layouts[i].alignment, alignment);
     }
     return {size, alignment};
 }
 
 namespace
 {
-LAUF_RUNTIME_BUILTIN_IMPL bool load_value(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                          lauf_runtime_stack_frame* frame_ptr,
-                                          lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE load_value(const lauf_asm_inst*      ip,
+                                                              lauf_runtime_value*       vstack_ptr,
+                                                              lauf_runtime_stack_frame* frame_ptr,
+                                                              lauf_runtime_process*     process)
 {
     vstack_ptr[1] = *static_cast<const lauf_runtime_value*>(vstack_ptr[1].as_native_ptr);
     ++vstack_ptr;
@@ -43,9 +44,10 @@ LAUF_RUNTIME_BUILTIN_IMPL bool load_value(const lauf_asm_inst* ip, lauf_runtime_
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
-LAUF_RUNTIME_BUILTIN_IMPL bool store_value(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                           lauf_runtime_stack_frame* frame_ptr,
-                                           lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE store_value(const lauf_asm_inst*      ip,
+                                                               lauf_runtime_value*       vstack_ptr,
+                                                               lauf_runtime_stack_frame* frame_ptr,
+                                                               lauf_runtime_process*     process)
 {
     *static_cast<lauf_runtime_value*>(vstack_ptr[1].as_native_ptr) = vstack_ptr[2];
     vstack_ptr += 3;
@@ -60,4 +62,3 @@ const lauf_asm_type lauf_asm_type_value = {LAUF_ASM_NATIVE_LAYOUT_OF(lauf_runtim
                                            &store_value,
                                            "lauf.Value",
                                            nullptr};
-
