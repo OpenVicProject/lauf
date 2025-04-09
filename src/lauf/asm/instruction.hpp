@@ -48,25 +48,60 @@ struct asm_inst_none
     asm_op op;
 };
 
+#pragma pack(1)
 struct asm_inst_offset
 {
-    asm_op       op : 8;
-    std::int32_t offset : 24;
+    asm_op op : 8;
+
+    constexpr std::int32_t offset() const
+    {
+#if _MSC_VER
+        return (static_cast<int32_t>(static_cast<int8_t>(_offset[2])) << 16) | (_offset[1] << 8)
+               | _offset[0];
+
+#else
+        return _offset;
+#endif
+    }
+    constexpr std::int32_t offset(std::int32_t value)
+    {
+#if _MSC_VER
+        _offset[0] = static_cast<uint8_t>(value & 0xFF);
+        _offset[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+        _offset[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+        return value;
+#else
+        LAUF_BITFIELD_CONVERSION(return _offset = value);
+#endif
+    }
+
+    asm_inst_offset() = default;
+    constexpr asm_inst_offset(asm_op op, std::int32_t offset) : op(op), _offset{}
+    {
+        this->offset(offset);
+    }
+
+private:
+#if _MSC_VER
+    std::uint8_t _offset[3];
+#else
+    std::int32_t _offset : 24;
+#endif
 };
+#pragma pack()
 
 template <typename CurType, typename DestType>
 std::ptrdiff_t compress_pointer_offset(CurType* _cur, DestType* _dest)
 {
-    auto cur  = (void*)(_cur);
-    auto dest = (void*)(_dest);
-    assert(is_aligned(cur, alignof(void*)) && is_aligned(dest, alignof(void*)));
-    return (void**)dest - (void**)cur;
+    auto cur  = (char*)(_cur);
+    auto dest = (char*)(_dest);
+    return _dest ? dest - cur : 0;
 }
 
 template <typename DestType, typename CurType>
 const DestType* uncompress_pointer_offset(CurType* cur, std::ptrdiff_t offset)
 {
-    return (const DestType*)(reinterpret_cast<void* const*>(cur) + offset);
+    return (DestType*)(reinterpret_cast<const char*>(cur) + offset);
 }
 
 struct asm_inst_signature
@@ -89,11 +124,66 @@ struct asm_inst_layout
     }
 };
 
+#pragma pack(1)
 struct asm_inst_value
 {
-    asm_op        op : 8;
-    std::uint32_t value : 24;
+    asm_op op : 8;
+
+    constexpr std::uint32_t value() const
+    {
+#if _MSC_VER
+        if (__builtin_is_constant_evaluated())
+        {
+            std::uint8_t array[sizeof(std::uint32_t)]{_value[0], _value[1], _value[2]};
+            return __builtin_bit_cast(std::uint32_t, array);
+        }
+        else
+        {
+            return *reinterpret_cast<std::uint8_t const*>(_value)
+                   | (*reinterpret_cast<std::uint16_t const*>(_value + 1) << 8);
+        }
+#else
+        return _value;
+#endif
+    }
+    constexpr std::uint32_t value(std::uint32_t value)
+    {
+#if _MSC_VER
+        if (__builtin_is_constant_evaluated())
+        {
+            struct array_type
+            {
+                std::uint8_t array[sizeof(value)];
+            };
+            auto array = __builtin_bit_cast(array_type, value);
+            _value[0]  = array.array[0];
+            _value[1]  = array.array[1];
+            _value[2]  = array.array[2];
+            return value;
+        }
+        else
+        {
+            return *reinterpret_cast<std::uint32_t*>(_value) = value;
+        }
+#else
+        LAUF_BITFIELD_CONVERSION(return _value = value);
+#endif
+    }
+
+    asm_inst_value() = default;
+    constexpr asm_inst_value(asm_op op, std::uint32_t value) : op(op), _value{}
+    {
+        this->value(value);
+    }
+
+private:
+#if _MSC_VER
+    std::uint8_t _value[3];
+#else
+    std::uint32_t _value : 24;
+#endif
 };
+#pragma pack()
 
 struct asm_inst_stack_idx
 {
@@ -127,4 +217,3 @@ union lauf_asm_inst
 };
 
 #endif // SRC_LAUF_ASM_INSTRUCTION_HPP_INCLUDED
-

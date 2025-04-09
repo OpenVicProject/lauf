@@ -13,7 +13,10 @@ void lauf_writer::write(const char* str)
     write(str, std::strlen(str));
 }
 
-[[gnu::format(printf, 2, 3)]] void lauf_writer::format(const char* fmt, ...)
+#if __has_cpp_attribute(gnu::format)
+[[gnu::format(printf, 2, 3)]]
+#endif
+void lauf_writer::format(const char* fmt, ...)
 {
     constexpr auto small_buffer = 1024;
     char           buffer[small_buffer + 1];
@@ -108,4 +111,3 @@ lauf_writer* lauf_create_stdout_writer(void)
 {
     return new file_writer(stdout);
 }
-

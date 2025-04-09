@@ -330,10 +330,11 @@ bool lauf_runtime_destroy_fiber(lauf_runtime_process* process, lauf_runtime_fibe
         for (auto frame_ptr                                   = fiber->suspension_point.frame_ptr;
              frame_ptr != &fiber->trampoline_frame; frame_ptr = frame_ptr->prev)
         {
-            auto first_inst        = frame_ptr->function->insts;
-            auto local_alloc_count = first_inst->op() == lauf::asm_op::setup_local_alloc
-                                         ? first_inst->setup_local_alloc.value
-                                         : 0u;
+            auto first_inst = frame_ptr->function->insts;
+            auto local_alloc_count
+                = first_inst->op() == lauf::asm_op::setup_local_alloc
+                      ? static_cast<uint32_t>(first_inst->setup_local_alloc.value())
+                      : 0u;
             for (auto i = 0u; i != local_alloc_count; ++i)
             {
                 auto  index = frame_ptr->first_local_alloc + i;

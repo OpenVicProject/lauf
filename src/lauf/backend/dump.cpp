@@ -141,28 +141,28 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             writer->write("return");
             break;
         case lauf::asm_op::return_free:
-            writer->format("return_free %d", ip->return_free.value);
+            writer->format("return_free %d", ip->return_free.value());
             break;
         case lauf::asm_op::jump:
-            writer->format("jump <%04zx>", ip + ip->jump.offset - fn->insts);
+            writer->format("jump <%04zx>", ip + ip->jump.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_eq:
-            writer->format("branch.eq <%04zx>", ip + ip->branch_eq.offset - fn->insts);
+            writer->format("branch.eq <%04zx>", ip + ip->branch_eq.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_ne:
-            writer->format("branch.ne <%04zx>", ip + ip->branch_ne.offset - fn->insts);
+            writer->format("branch.ne <%04zx>", ip + ip->branch_ne.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_lt:
-            writer->format("branch.lt <%04zx>", ip + ip->branch_lt.offset - fn->insts);
+            writer->format("branch.lt <%04zx>", ip + ip->branch_lt.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_le:
-            writer->format("branch.le <%04zx>", ip + ip->branch_le.offset - fn->insts);
+            writer->format("branch.le <%04zx>", ip + ip->branch_le.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_ge:
-            writer->format("branch.ge <%04zx>", ip + ip->branch_ge.offset - fn->insts);
+            writer->format("branch.ge <%04zx>", ip + ip->branch_ge.offset() - fn->insts);
             break;
         case lauf::asm_op::branch_gt:
-            writer->format("branch.gt <%04zx>", ip + ip->branch_gt.offset - fn->insts);
+            writer->format("branch.gt <%04zx>", ip + ip->branch_gt.offset() - fn->insts);
             break;
         case lauf::asm_op::panic:
             writer->write("panic");
@@ -175,7 +175,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::call: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset());
             writer->format("call @'%s'", callee->name);
             break;
         }
@@ -186,7 +186,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
         case lauf::asm_op::call_builtin:
         case lauf::asm_op::call_builtin_no_regs: {
             auto callee = lauf::uncompress_pointer_offset<lauf_runtime_builtin_impl> //
-                (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset);
+                (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset());
             if (auto name = find_builtin_name(opts, callee); !name.empty())
                 writer->format("$'%s'", name.c_str());
             else
@@ -213,23 +213,24 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::push:
-            writer->format("push 0x%X", ip->push.value);
+            writer->format("push 0x%X", ip->push.value());
             break;
         case lauf::asm_op::push2:
-            writer->format("push2 0x%X", ip->push2.value);
+            writer->format("push2 0x%X", ip->push2.value());
             break;
         case lauf::asm_op::push3:
-            writer->format("push3 0x%X", ip->push3.value);
+            writer->format("push3 0x%X", ip->push3.value());
             break;
         case lauf::asm_op::pushn:
-            writer->format("pushn 0x%X", ip->pushn.value);
+            writer->format("pushn 0x%X", ip->pushn.value());
             break;
         case lauf::asm_op::global_addr: {
-            writer->format("global_addr @%s", find_global_name(mod, ip->global_addr.value).c_str());
+            writer->format("global_addr @%s",
+                           find_global_name(mod, ip->global_addr.value()).c_str());
             break;
         }
         case lauf::asm_op::function_addr: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset());
             writer->format("function_addr @'%s'", callee->name);
             break;
         }
@@ -239,7 +240,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
         }
         case lauf::asm_op::cc: {
-            switch (lauf_asm_inst_condition_code(ip->cc.value))
+            switch (lauf_asm_inst_condition_code(ip->cc.value()))
             {
             case LAUF_ASM_INST_CC_EQ:
                 writer->write("cc eq");
@@ -280,7 +281,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
 
         case lauf::asm_op::setup_local_alloc:
-            writer->format("setup_local_alloc %u", ip->setup_local_alloc.value);
+            writer->format("setup_local_alloc %u", ip->setup_local_alloc.value());
             break;
         case lauf::asm_op::local_alloc:
             writer->format("local_alloc (%u, %zu)", ip->local_alloc.size,
@@ -291,7 +292,7 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
                            ip->local_alloc_aligned.alignment());
             break;
         case lauf::asm_op::local_storage:
-            writer->format("local_storage (%u, 8)", ip->local_storage.value);
+            writer->format("local_storage (%u, 8)", ip->local_storage.value());
             break;
         case lauf::asm_op::deref_const:
             writer->format("deref_const (%u, %zu)", ip->deref_const.size,
@@ -301,10 +302,10 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             writer->format("deref_mut (%u, %zu)", ip->deref_mut.size, ip->deref_mut.alignment());
             break;
         case lauf::asm_op::array_element:
-            writer->format("array_element [%u]", ip->array_element.value);
+            writer->format("array_element [%u]", ip->array_element.value());
             break;
         case lauf::asm_op::aggregate_member:
-            writer->format("aggregate_member %u", ip->aggregate_member.value);
+            writer->format("aggregate_member %u", ip->aggregate_member.value());
             break;
         case lauf::asm_op::load_local_value:
             writer->format("load_local_value %u <%zx>", ip->load_local_value.index,
@@ -316,11 +317,11 @@ void dump_function(lauf_writer* writer, lauf_backend_dump_options opts, const la
             break;
         case lauf::asm_op::load_global_value:
             writer->format("load_global_value @%s",
-                           find_global_name(mod, ip->load_global_value.value).c_str());
+                           find_global_name(mod, ip->load_global_value.value()).c_str());
             break;
         case lauf::asm_op::store_global_value:
             writer->format("store_global_value @%s",
-                           find_global_name(mod, ip->store_global_value.value).c_str());
+                           find_global_name(mod, ip->store_global_value.value()).c_str());
             break;
 
         case lauf::asm_op::count:
@@ -369,4 +370,3 @@ void lauf_backend_dump_chunk(lauf_writer* writer, lauf_backend_dump_options opti
     dump_module_header(writer, mod);
     dump_function(writer, options, mod, chunk->fn);
 }
-

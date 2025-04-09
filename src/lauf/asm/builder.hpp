@@ -283,7 +283,7 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
     [&](const char* context, std::ptrdiff_t offset) {                                              \
         lauf_asm_inst result;                                                                      \
         LAUF_BITFIELD_CONVERSION(result.Name = {lauf::asm_op::Name, std::int32_t(offset)});        \
-        if (result.Name.offset != offset)                                                          \
+        if (result.Name.offset() != offset)                                                        \
             b->error(context, "offset too big");                                                   \
         return result;                                                                             \
     }(LAUF_BUILD_ASSERT_CONTEXT, static_cast<std::int64_t>(Offset))
@@ -316,7 +316,7 @@ struct lauf_asm_builder : lauf::intrinsic_arena<lauf_asm_builder>
     [&](const char* context, std::size_t value) {                                                  \
         lauf_asm_inst result;                                                                      \
         LAUF_BITFIELD_CONVERSION(result.Name = {lauf::asm_op::Name, std::uint32_t(value)});        \
-        if (value != result.Name.value)                                                            \
+        if (value != result.Name.value())                                                          \
             b->error(context, "invalid value");                                                    \
         return result;                                                                             \
     }(LAUF_BUILD_ASSERT_CONTEXT, Value)

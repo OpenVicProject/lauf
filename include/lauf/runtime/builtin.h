@@ -16,6 +16,8 @@ LAUF_HEADER_START
 #    endif
 #elif defined(__GNUC__) || defined(__GNUG__)
 #    define LAUF_RUNTIME_BUILTIN_IMPL __attribute__((section(".text.lauf_builtin"), aligned(8)))
+#elif defined(_MSC_VER)
+#    define LAUF_RUNTIME_BUILTIN_IMPL __declspec(code_seg(".text.lauf_builtin"))
 #else
 #    define LAUF_RUNTIME_BUILTIN_IMPL
 #endif

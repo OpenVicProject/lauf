@@ -182,35 +182,35 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             break;
 
         case lauf::asm_op::jump:
-            writer.jmp(block_id(ip + ip->jump.offset));
+            writer.jmp(block_id(ip + ip->jump.offset()));
             break;
 
         case lauf::asm_op::branch_eq:
-            writer.jnz(pop_reg(), block_id(ip + 1), block_id(ip + ip->branch_eq.offset));
+            writer.jnz(pop_reg(), block_id(ip + 1), block_id(ip + ip->branch_eq.offset()));
             break;
         case lauf::asm_op::branch_ne:
-            writer.jnz(pop_reg(), block_id(ip + ip->branch_ne.offset), block_id(ip + 1));
+            writer.jnz(pop_reg(), block_id(ip + ip->branch_ne.offset()), block_id(ip + 1));
             break;
 
         case lauf::asm_op::branch_lt:
             writer.comparison(lauf::qbe_reg::tmp, lauf::qbe_cc::slt, lauf::qbe_type::value,
                               pop_reg(), std::uintmax_t(0));
-            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_lt.offset), block_id(ip + 1));
+            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_lt.offset()), block_id(ip + 1));
             break;
         case lauf::asm_op::branch_le:
             writer.comparison(lauf::qbe_reg::tmp, lauf::qbe_cc::sle, lauf::qbe_type::value,
                               pop_reg(), std::uintmax_t(0));
-            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_le.offset), block_id(ip + 1));
+            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_le.offset()), block_id(ip + 1));
             break;
         case lauf::asm_op::branch_ge:
             writer.comparison(lauf::qbe_reg::tmp, lauf::qbe_cc::sge, lauf::qbe_type::value,
                               pop_reg(), std::uintmax_t(0));
-            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_ge.offset), block_id(ip + 1));
+            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_ge.offset()), block_id(ip + 1));
             break;
         case lauf::asm_op::branch_gt:
             writer.comparison(lauf::qbe_reg::tmp, lauf::qbe_cc::sgt, lauf::qbe_type::value,
                               pop_reg(), std::uintmax_t(0));
-            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_gt.offset), block_id(ip + 1));
+            writer.jnz(lauf::qbe_reg::tmp, block_id(ip + ip->branch_gt.offset()), block_id(ip + 1));
             break;
 
         case lauf::asm_op::panic:
@@ -233,7 +233,7 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
         }
 
         case lauf::asm_op::call: {
-            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset);
+            auto callee = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->call.offset());
             write_call(callee->name, callee->sig.input_count, callee->sig.output_count);
             break;
         }
@@ -245,7 +245,7 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
         case lauf::asm_op::call_builtin_no_regs: {
             assert(ip[1].op() == lauf::asm_op::call_builtin_sig);
             auto callee = lauf::uncompress_pointer_offset<lauf_runtime_builtin_impl> //
-                (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset);
+                (&lauf_runtime_builtin_dispatch, ip->call_builtin.offset());
             auto metadata = ip[1].call_builtin_sig;
 
             //=== VM directives ===//
@@ -653,31 +653,31 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             break;
 
         case lauf::asm_op::push: {
-            auto value = std::uint64_t(ip->push.value);
+            auto value = std::uint64_t(ip->push.value());
             if (ip[1].op() == lauf::asm_op::push2)
             {
-                value |= std::uint64_t(ip[1].push2.value) << 24;
+                value |= std::uint64_t(ip[1].push2.value()) << 24;
                 if (ip[2].op() == lauf::asm_op::push3)
-                    value |= std::uint64_t(ip[2].push3.value) << 48;
+                    value |= std::uint64_t(ip[2].push3.value()) << 48;
             }
             else if (ip[1].op() == lauf::asm_op::push3)
             {
-                value |= std::uint64_t(ip[1].push3.value) << 48;
+                value |= std::uint64_t(ip[1].push3.value()) << 48;
             }
             writer.copy(push_reg(), lauf::qbe_type::value, value);
             break;
         }
         case lauf::asm_op::pushn: {
-            auto value = ~std::uint64_t(ip->pushn.value);
+            auto value = ~std::uint64_t(ip->pushn.value());
             if (ip[1].op() == lauf::asm_op::push2)
             {
-                value |= std::uint64_t(ip[1].push2.value) << 24;
+                value |= std::uint64_t(ip[1].push2.value()) << 24;
                 if (ip[2].op() == lauf::asm_op::push3)
-                    value |= std::uint64_t(ip[2].push3.value) << 48;
+                    value |= std::uint64_t(ip[2].push3.value()) << 48;
             }
             else if (ip[1].op() == lauf::asm_op::push3)
             {
-                value |= std::uint64_t(ip[1].push3.value) << 48;
+                value |= std::uint64_t(ip[1].push3.value()) << 48;
             }
             writer.copy(push_reg(), lauf::qbe_type::value, value);
             break;
@@ -688,11 +688,12 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             break;
 
         case lauf::asm_op::global_addr:
-            writer.copy(push_reg(), lauf::qbe_type::value, lauf::qbe_data(ip->global_addr.value));
+            writer.copy(push_reg(), lauf::qbe_type::value, lauf::qbe_data(ip->global_addr.value()));
             break;
         case lauf::asm_op::function_addr: {
             auto callee
-                = lauf::uncompress_pointer_offset<lauf_asm_function>(fn, ip->function_addr.offset);
+                = lauf::uncompress_pointer_offset<lauf_asm_function>(fn,
+                                                                     ip->function_addr.offset());
             writer.copy(push_reg(), lauf::qbe_type::value, callee->name);
             break;
         }
@@ -703,7 +704,7 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
         case lauf::asm_op::cc: {
             auto top  = pop_reg();
             auto dest = push_reg();
-            switch (lauf_asm_inst_condition_code(ip->cc.value))
+            switch (lauf_asm_inst_condition_code(ip->cc.value()))
             {
             case LAUF_ASM_INST_CC_EQ:
                 writer.comparison(dest, lauf::qbe_cc::ieq, lauf::qbe_type::value, top,
@@ -805,20 +806,20 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             }
             break;
         case lauf::asm_op::local_storage:
-            writer.alloc8(next_alloc(), std::uintmax_t(ip->local_storage.value));
+            writer.alloc8(next_alloc(), std::uintmax_t(ip->local_storage.value()));
             break;
         case lauf::asm_op::array_element: {
             auto index = pop_reg();
             auto ptr   = lauf::qbe_reg(vstack - 1);
             writer.binary_op(lauf::qbe_reg::tmp, lauf::qbe_type::value, "mul",
-                             std::uintmax_t(ip->array_element.value), index);
+                             std::uintmax_t(ip->array_element.value()), index);
             writer.binary_op(ptr, lauf::qbe_type::value, "add", ptr, lauf::qbe_reg::tmp);
             break;
         }
         case lauf::asm_op::aggregate_member: {
             auto ptr = lauf::qbe_reg(vstack - 1);
             writer.binary_op(ptr, lauf::qbe_type::value, "add", ptr,
-                             std::uintmax_t(ip->aggregate_member.value));
+                             std::uintmax_t(ip->aggregate_member.value()));
             break;
         }
         case lauf::asm_op::deref_const:
@@ -835,11 +836,11 @@ void codegen_function(lauf::qbe_writer& writer, const lauf_backend_qbe_options& 
             break;
         case lauf::asm_op::load_global_value:
             writer.load(push_reg(), lauf::qbe_type::value,
-                        lauf::qbe_data(ip->load_global_value.value));
+                        lauf::qbe_data(ip->load_global_value.value()));
             break;
         case lauf::asm_op::store_global_value:
             writer.store(lauf::qbe_type::value, pop_reg(),
-                         lauf::qbe_data(ip->store_global_value.value));
+                         lauf::qbe_data(ip->store_global_value.value()));
             break;
 
         case lauf::asm_op::exit:
@@ -866,4 +867,3 @@ void lauf_backend_qbe(lauf_writer* _writer, lauf_backend_qbe_options options,
 
     std::move(writer).finish(_writer);
 }
-

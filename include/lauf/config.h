@@ -43,6 +43,9 @@ typedef uint64_t lauf_uint;
 #    if defined(__has_cpp_attribute)
 #        if __has_cpp_attribute(clang::musttail)
 #            define LAUF_TAIL_CALL [[clang::musttail]]
+#            ifndef LAUF_HAS_TAIL_CALL_ELIMINATION
+#                define LAUF_HAS_TAIL_CALL_ELIMINATION 1
+#            endif
 #        elif defined(__clang__)
 #            define LAUF_TAIL_CALL [[clang::musttail]]
 #        else
@@ -52,6 +55,13 @@ typedef uint64_t lauf_uint;
 #    define LAUF_NOINLINE [[gnu::noinline]]
 #    define LAUF_FORCE_INLINE [[gnu::always_inline]] inline
 #    define LAUF_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#    define LAUF_LIKELY(Cond) (Cond)
+#    define LAUF_UNLIKELY(Cond) (Cond)
+#    define LAUF_TAIL_CALL
+#    define LAUF_NOINLINE __declspec(noinline)
+#    define LAUF_FORCE_INLINE __forceinline
+#    define LAUF_UNREACHABLE __assume(0)
 #endif
 
 //=== configurations ===//
@@ -60,7 +70,7 @@ typedef uint64_t lauf_uint;
 #endif
 
 #ifndef LAUF_HAS_TAIL_CALL_ELIMINATION
-#    define LAUF_HAS_TAIL_CALL_ELIMINATION 1
+#    define LAUF_HAS_TAIL_CALL_ELIMINATION 0
 #endif
 
 //=== warnings ===//
@@ -70,6 +80,12 @@ typedef uint64_t lauf_uint;
         _Pragma("GCC diagnostic ignored \"-Wconversion\"");                                        \
         __VA_ARGS__;                                                                               \
         _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#    define LAUF_BITFIELD_CONVERSION(...)                                                          \
+        _Pragma("warning(push)");                                                                  \
+        _Pragma("warning(disable : 4267)");                                                        \
+        __VA_ARGS__;                                                                               \
+        _Pragma("warning(pop)")
 #else
 #    define LAUF_BITFIELD_CONVERSION(...) __VA_ARGS__
 #endif
