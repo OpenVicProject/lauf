@@ -13,9 +13,17 @@ typedef union lauf_runtime_value        lauf_runtime_value;
 typedef struct lauf_runtime_process     lauf_runtime_process;
 typedef struct lauf_runtime_stack_frame lauf_runtime_stack_frame;
 
+#if LAUF_HAS_TAIL_CALL_ELIMINATION
 typedef bool lauf_runtime_builtin_impl(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
                                        lauf_runtime_stack_frame* frame_ptr,
                                        lauf_runtime_process*     process);
+#else
+typedef union lauf_tail_call_result lauf_tail_call_result;
+typedef lauf_tail_call_result       lauf_runtime_builtin_impl(const lauf_asm_inst*      ip,
+                                                              lauf_runtime_value*       vstack_ptr,
+                                                              lauf_runtime_stack_frame* frame_ptr,
+                                                              lauf_runtime_process*     process);
+#endif
 
 /// The layout of a type.
 typedef struct lauf_asm_layout
@@ -72,4 +80,3 @@ extern const lauf_asm_type lauf_asm_type_value;
 LAUF_HEADER_END
 
 #endif // LAUF_ASM_TYPE_H_INCLUDED
-

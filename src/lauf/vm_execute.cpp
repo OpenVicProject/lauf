@@ -13,10 +13,9 @@
 
 //=== execute ===//
 #define LAUF_ASM_INST(Name, Type)                                                                  \
-    LAUF_NOINLINE static bool execute_##Name(const lauf_asm_inst*      ip,                         \
-                                             lauf_runtime_value*       vstack_ptr,                 \
-                                             lauf_runtime_stack_frame* frame_ptr,                  \
-                                             lauf_runtime_process*     process);
+    LAUF_NOINLINE static LAUF_BUILTIN_RETURN_TYPE                                                  \
+        execute_##Name(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,                    \
+                       lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process);
 #include <lauf/asm/instruction.def.hpp>
 #undef LAUF_ASM_INST
 
@@ -30,9 +29,10 @@ lauf_runtime_builtin_impl* const lauf::_vm_dispatch_table[] = {
 
 #else
 
-LAUF_FORCE_INLINE bool lauf::_vm_dispatch(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                          lauf_runtime_stack_frame* frame_ptr,
-                                          lauf_runtime_process*     process)
+LAUF_FORCE_INLINE LAUF_BUILTIN_RETURN_TYPE lauf::_vm_dispatch(const lauf_asm_inst*      ip,
+                                                              lauf_runtime_value*       vstack_ptr,
+                                                              lauf_runtime_stack_frame* frame_ptr,
+                                                              lauf_runtime_process*     process)
 {
     // Note that we're using a switch here, which the compiler could also lower to a jump table.
     // If jump tables are disabled using CMake, it also adds the corresponding optimization flag to
@@ -53,10 +53,9 @@ LAUF_FORCE_INLINE bool lauf::_vm_dispatch(const lauf_asm_inst* ip, lauf_runtime_
 
 #if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
 #    undef lauf_runtime_builtin_dispatch
-LAUF_RUNTIME_BUILTIN_IMPL bool lauf_runtime_builtin_dispatch(const lauf_asm_inst*      ip,
-                                                             lauf_runtime_value*       vstack_ptr,
-                                                             lauf_runtime_stack_frame* frame_ptr,
-                                                             lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_dispatch(
+    const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr, lauf_runtime_stack_frame* frame_ptr,
+    lauf_runtime_process* process)
 {
     return lauf_runtime_builtin_dispatch_inline(ip, vstack_ptr, frame_ptr, process);
 }
@@ -68,20 +67,21 @@ LAUF_RUNTIME_BUILTIN_IMPL bool lauf_runtime_builtin_dispatch(const lauf_asm_inst
 // That way the the hot path contains no function calls, so the compiler doesn't spill stuff.
 namespace
 {
-LAUF_NOINLINE bool do_panic(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                            lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
+LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE do_panic(const lauf_asm_inst*      ip,
+                                                lauf_runtime_value*       vstack_ptr,
+                                                lauf_runtime_stack_frame* frame_ptr,
+                                                lauf_runtime_process*     process)
 {
     auto msg      = reinterpret_cast<const char*>(vstack_ptr);
     process->regs = {ip, vstack_ptr, frame_ptr};
-    return lauf_runtime_panic(process, msg);
+    LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, msg));
 }
 #define LAUF_DO_PANIC(Msg)                                                                         \
     LAUF_TAIL_CALL return do_panic(ip, (lauf_runtime_value*)(Msg), frame_ptr, process)
 
-LAUF_NOINLINE bool allocate_more_vstack_space(const lauf_asm_inst*      ip,
-                                              lauf_runtime_value*       vstack_ptr,
-                                              lauf_runtime_stack_frame* frame_ptr,
-                                              lauf_runtime_process*     process)
+LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE
+    allocate_more_vstack_space(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
+                               lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
 {
     process->cur_fiber->vstack.grow(process->vm->page_allocator, vstack_ptr);
     if (LAUF_UNLIKELY(process->cur_fiber->vstack.capacity() > process->vm->max_vstack_size))
@@ -90,10 +90,9 @@ LAUF_NOINLINE bool allocate_more_vstack_space(const lauf_asm_inst*      ip,
     LAUF_VM_DISPATCH;
 }
 
-LAUF_NOINLINE bool allocate_more_cstack_space(const lauf_asm_inst*      ip,
-                                              lauf_runtime_value*       vstack_ptr,
-                                              lauf_runtime_stack_frame* frame_ptr,
-                                              lauf_runtime_process*     process)
+LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE
+    allocate_more_cstack_space(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
+                               lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
 {
     process->cur_fiber->cstack.grow(process->vm->page_allocator, frame_ptr);
     if (LAUF_UNLIKELY(process->cur_fiber->cstack.capacity() > process->vm->max_cstack_size))
@@ -119,9 +118,10 @@ LAUF_NOINLINE bool allocate_more_cstack_space(const lauf_asm_inst*      ip,
         ip        = (Callee)->insts;                                                               \
     }
 
-LAUF_NOINLINE bool call_undefined_function(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                           lauf_runtime_stack_frame* frame_ptr,
-                                           lauf_runtime_process*     process)
+LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE call_undefined_function(const lauf_asm_inst*      ip,
+                                                               lauf_runtime_value*       vstack_ptr,
+                                                               lauf_runtime_stack_frame* frame_ptr,
+                                                               lauf_runtime_process*     process)
 {
     auto callee
         = lauf::uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function, ip->call.offset);
@@ -155,7 +155,7 @@ LAUF_NOINLINE bool call_undefined_function(const lauf_asm_inst* ip, lauf_runtime
 
         // Call the function.
         if (!definition->native.fn(definition->native.user_data, process, input, vstack_ptr))
-            return false;
+            LAUF_BUILTIN_RETURN(false);
 
         // We need to reverse the order of output arguments.
         for (auto lhs = vstack_ptr, rhs = vstack_ptr + callee->sig.output_count - 1; lhs < rhs;
@@ -173,9 +173,10 @@ LAUF_NOINLINE bool call_undefined_function(const lauf_asm_inst* ip, lauf_runtime
     }
 }
 
-LAUF_NOINLINE bool grow_allocation_array(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                         lauf_runtime_stack_frame* frame_ptr,
-                                         lauf_runtime_process*     process)
+LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE grow_allocation_array(const lauf_asm_inst*      ip,
+                                                             lauf_runtime_value*       vstack_ptr,
+                                                             lauf_runtime_stack_frame* frame_ptr,
+                                                             lauf_runtime_process*     process)
 {
     process->memory.grow(process->vm->page_allocator);
     LAUF_VM_DISPATCH;
@@ -199,8 +200,10 @@ LAUF_FORCE_INLINE std::size_t get_global_allocation_idx(lauf_runtime_stack_frame
 } // namespace
 
 #define LAUF_VM_EXECUTE(Name)                                                                      \
-    bool execute_##Name(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,                   \
-                        lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
+    LAUF_BUILTIN_RETURN_TYPE execute_##Name(const lauf_asm_inst*      ip,                          \
+                                            lauf_runtime_value*       vstack_ptr,                  \
+                                            lauf_runtime_stack_frame* frame_ptr,                   \
+                                            lauf_runtime_process*     process)
 
 //=== control flow ===//
 LAUF_VM_EXECUTE(nop)
@@ -288,7 +291,7 @@ LAUF_VM_EXECUTE(exit)
     if (LAUF_UNLIKELY(process == nullptr))
         // During constant folding, we don't have a process, so check first.
         // We also don't have fibers, so just return.
-        return true;
+        LAUF_BUILTIN_RETURN(true);
 
     auto cur_fiber = process->cur_fiber;
     auto new_fiber = lauf::get_fiber(process, cur_fiber->parent);
@@ -300,7 +303,7 @@ LAUF_VM_EXECUTE(exit)
         // We don't have a parent (anymore?), return to lauf_runtime_call().
         // We don't reset cur_fiber.
         process->regs = {nullptr, nullptr, nullptr};
-        return true;
+        LAUF_BUILTIN_RETURN(true);
     }
     else
     {
@@ -452,7 +455,7 @@ LAUF_VM_EXECUTE(fiber_suspend)
         // We're suspending the main fiber, so return instead.
         cur_fiber->suspend({ip, vstack_ptr, frame_ptr}, ip->fiber_suspend.output_count);
         // We don't reset process->cur_fiber, so we know which fiber was suspended last.
-        return true;
+        LAUF_BUILTIN_RETURN(true);
     }
     else
     {

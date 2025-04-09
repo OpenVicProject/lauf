@@ -225,8 +225,23 @@ bool lauf_runtime_resume(lauf_runtime_process* process, lauf_runtime_fiber* fibe
         vstack_ptr[0] = input[i];
     }
 
+#if LAUF_HAS_TAIL_CALL_ELIMINATION
     auto success = lauf::execute(fiber->suspension_point.ip + 1, fiber->suspension_point.vstack_ptr,
                                  fiber->suspension_point.frame_ptr, process);
+#else
+    LAUF_BUILTIN_RETURN_TYPE tail_call_result
+        = lauf::execute(fiber->suspension_point.ip + 1, fiber->suspension_point.vstack_ptr,
+                        fiber->suspension_point.frame_ptr, process);
+    while (tail_call_result.function.is_function)
+    {
+        tail_call_result
+            = tail_call_result.function.next_func(tail_call_result.function.cur_ip,
+                                                  tail_call_result.function.cur_stack_ptr,
+                                                  tail_call_result.function.cur_frame_ptr,
+                                                  tail_call_result.function.cur_process);
+    }
+    [[maybe_unused]] bool success = tail_call_result.value.value;
+#endif
     if (LAUF_LIKELY(success))
     {
         // fiber could have changed, so reset back to the current fiber.

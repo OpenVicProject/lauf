@@ -31,7 +31,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_unreachable, 0, 0,
     (void)ip;
     (void)vstack_ptr;
     (void)frame_ptr;
-    return lauf_runtime_panic(process, "unreachable code reached");
+    LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "unreachable code reached"));
 }
 
 LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert, 1, 0, LAUF_RUNTIME_BUILTIN_NO_PROCESS, "assert",
@@ -43,7 +43,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert, 1, 0, LAUF_RUNTIME_BUILTIN_NO_PROCESS
     if (value != 0)
         LAUF_RUNTIME_BUILTIN_DISPATCH;
     else
-        return lauf_runtime_panic(process, "assert failed");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "assert failed"));
 }
 
 LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_eq, 2, 0, LAUF_RUNTIME_BUILTIN_NO_PROCESS, "assert_eq",
@@ -56,7 +56,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_eq, 2, 0, LAUF_RUNTIME_BUILTIN_NO_PROC
     if (lhs == rhs)
         LAUF_RUNTIME_BUILTIN_DISPATCH;
     else
-        return lauf_runtime_panic(process, "assert_eq failed");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "assert_eq failed"));
 }
 
 LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_panic, 2, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "assert_panic",
@@ -67,7 +67,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_panic, 2, 0, LAUF_RUNTIME_BUILTIN_DEFA
     vstack_ptr += 2;
 
     if (fn == nullptr)
-        return lauf_runtime_panic(process, "invalid function");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid function"));
 
     // We temporarily replace the panic handler with one that simply remembers the message.
     auto                            vm = lauf_runtime_get_vm(process);
@@ -81,15 +81,15 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_panic, 2, 0, LAUF_RUNTIME_BUILTIN_DEFA
     lauf_vm_set_panic_handler(vm, handler);
 
     if (did_not_panic)
-        return lauf_runtime_panic(process, "assert_panic failed: no panic");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "assert_panic failed: no panic"));
     else if (expected_msg == nullptr && panic_msg != nullptr)
-        return lauf_runtime_panic(process, "assert_panic failed: did not expect message");
+        LAUF_BUILTIN_RETURN(
+            lauf_runtime_panic(process, "assert_panic failed: did not expect message"));
     else if (expected_msg != nullptr && std::strcmp(expected_msg, panic_msg) != 0)
-        return lauf_runtime_panic(process, "assert_panic failed: different message");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "assert_panic failed: different message"));
     else
         LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
 const lauf_runtime_builtin_library lauf_lib_test
     = {"lauf.test", &lauf_lib_test_assert_panic, nullptr};
-
