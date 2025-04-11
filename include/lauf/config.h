@@ -59,10 +59,8 @@ typedef uint64_t lauf_uint;
 #    define LAUF_CONFIG_DISPATCH_JUMP_TABLE 1
 #endif
 
-#if defined(__has_cpp_attribute)
-#    if __has_cpp_attribute(clang::musttail)
-#        define LAUF_HAS_TAIL_CALL_ELIMINATION 1
-#    endif
+#ifndef LAUF_HAS_TAIL_CALL_ELIMINATION
+#    define LAUF_HAS_TAIL_CALL_ELIMINATION 1
 #endif
 
 //=== warnings ===//

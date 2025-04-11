@@ -47,16 +47,23 @@ typedef enum lauf_runtime_builtin_flags
     LAUF_RUNTIME_BUILTIN_ALWAYS_PANIC = 1 << 4,
 } lauf_runtime_builtin_flags;
 
+#if LAUF_HAS_TAIL_CALL_ELIMINATION
+#    define LAUF_BUILTIN_RETURN_TYPE bool
+#else
+typedef union lauf_tail_call_result lauf_tail_call_result;
+#    define LAUF_BUILTIN_RETURN_TYPE lauf_tail_call_result
+#endif
+
 /// Must be tail-called when a buitlin finishes succesfully.
-LAUF_RUNTIME_BUILTIN_IMPL bool lauf_runtime_builtin_dispatch(const lauf_asm_inst*      ip,
-                                                             lauf_runtime_value*       vstack_ptr,
-                                                             lauf_runtime_stack_frame* frame_ptr,
-                                                             lauf_runtime_process*     process);
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_dispatch(
+    const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr, lauf_runtime_stack_frame* frame_ptr,
+    lauf_runtime_process* process);
 
 /// The signature of the implementation of a builtin.
-typedef bool lauf_runtime_builtin_impl(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                       lauf_runtime_stack_frame* frame_ptr,
-                                       lauf_runtime_process*     process);
+typedef LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_impl(const lauf_asm_inst*      ip,
+                                                           lauf_runtime_value*       vstack_ptr,
+                                                           lauf_runtime_stack_frame* frame_ptr,
+                                                           lauf_runtime_process*     process);
 
 /// A builtin function.
 typedef struct lauf_runtime_builtin
@@ -74,16 +81,47 @@ typedef struct lauf_runtime_builtin
     const lauf_runtime_builtin* next;
 } lauf_runtime_builtin;
 
-#define LAUF_RUNTIME_BUILTIN(ConstantName, InputCount, OutputCount, Flags, Name, Next)              \
-    static bool ConstantName##_impl(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,        \
-                                    lauf_runtime_stack_frame* frame_ptr,                            \
-                                    lauf_runtime_process*     process);                                 \
-    const lauf_runtime_builtin ConstantName                                                         \
-        = {&ConstantName##_impl, InputCount, OutputCount, Flags, Name, Next};                       \
-    LAUF_RUNTIME_BUILTIN_IMPL static bool ConstantName##_impl(const lauf_asm_inst*      ip,         \
-                                                              lauf_runtime_value*       vstack_ptr, \
-                                                              lauf_runtime_stack_frame* frame_ptr,  \
-                                                              lauf_runtime_process*     process)
+#if !LAUF_HAS_TAIL_CALL_ELIMINATION
+typedef union lauf_tail_call_result
+{
+    struct
+    {
+        bool                       is_function;
+        lauf_runtime_builtin_impl* next_func;
+        const lauf_asm_inst*       cur_ip;
+        lauf_runtime_value*        cur_stack_ptr;
+        lauf_runtime_stack_frame*  cur_frame_ptr;
+        lauf_runtime_process*      cur_process;
+    } function;
+    struct
+    {
+        bool is_function;
+        bool value;
+    } value;
+} lauf_tail_call_result;
+
+#    define LAUF_BUILTIN_RETURN(...)                                                               \
+        return                                                                                     \
+        {                                                                                          \
+            .value                                                                                 \
+            {                                                                                      \
+                false, __VA_ARGS__                                                                 \
+            }                                                                                      \
+        }
+#else
+#    define LAUF_BUILTIN_RETURN(...) return __VA_ARGS__
+#endif
+
+#define LAUF_RUNTIME_BUILTIN(ConstantName, InputCount, OutputCount, Flags, Name, Next)             \
+    static LAUF_BUILTIN_RETURN_TYPE ConstantName##_impl(const lauf_asm_inst*      ip,              \
+                                                        lauf_runtime_value*       vstack_ptr,      \
+                                                        lauf_runtime_stack_frame* frame_ptr,       \
+                                                        lauf_runtime_process*     process);            \
+    const lauf_runtime_builtin      ConstantName                                                   \
+        = {&ConstantName##_impl, InputCount, OutputCount, Flags, Name, Next};                      \
+    LAUF_RUNTIME_BUILTIN_IMPL static LAUF_BUILTIN_RETURN_TYPE                                      \
+        ConstantName##_impl(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,               \
+                            lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
 
 #define LAUF_RUNTIME_BUILTIN_DISPATCH                                                              \
     LAUF_TAIL_CALL return lauf_runtime_builtin_dispatch(ip, vstack_ptr, frame_ptr, process)
