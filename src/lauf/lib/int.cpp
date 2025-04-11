@@ -23,6 +23,7 @@
         case LAUF_LIB_INT_OVERFLOW_PANIC:                                                          \
             return Name##_panic;                                                                   \
         }                                                                                          \
+        LAUF_UNREACHABLE;                                                                          \
     }
 
 namespace
@@ -537,6 +538,8 @@ LAUF_RUNTIME_BUILTIN_IMPL bool load_int(const lauf_asm_inst* ip, lauf_runtime_va
 
     if constexpr (std::is_unsigned_v<Int>)
         vstack_ptr[1].as_uint = value;
+    else if constexpr (std::is_same_v<Int, signed char>)
+        vstack_ptr[1].as_sint = static_cast<int>(value);
     else
         vstack_ptr[1].as_sint = value;
 
@@ -670,4 +673,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_u64_overflow, 1, 2, no_panic_flags, "u64_overf
 
 const lauf_runtime_builtin_library lauf_lib_int
     = {"lauf.int", &lauf_lib_int_u64_overflow, &lauf_lib_int_u64};
-

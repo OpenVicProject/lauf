@@ -57,14 +57,29 @@ inline bool execute(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
 }
 } // namespace lauf
 
+// Clang supports inline of previously non-inlined function
+// GCC does
+#if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
+extern "C" [[gnu::always_inline]] inline bool lauf_runtime_builtin_dispatch_inline(
+    const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr, lauf_runtime_stack_frame* frame_ptr,
+    lauf_runtime_process* process)
+#else
 inline bool lauf_runtime_builtin_dispatch(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
                                           lauf_runtime_stack_frame* frame_ptr,
                                           lauf_runtime_process*     process)
+#endif
 {
     assert(ip[1].op() == lauf::asm_op::call_builtin_sig);
     ip += 2;
     LAUF_VM_DISPATCH;
 }
 
-#endif // SRC_LAUF_VM_EXECUTE_HPP_INCLUDED
+#if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
+#    define lauf_runtime_builtin_dispatch lauf_runtime_builtin_dispatch_inline
+#    undef LAUF_RUNTIME_BUILTIN_DISPATCH
+#    define LAUF_RUNTIME_BUILTIN_DISPATCH                                                          \
+        LAUF_TAIL_CALL return lauf_runtime_builtin_dispatch_inline(ip, vstack_ptr, frame_ptr,      \
+                                                                   process)
+#endif
 
+#endif // SRC_LAUF_VM_EXECUTE_HPP_INCLUDED

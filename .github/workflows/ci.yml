@@ -9,6 +9,7 @@ jobs:
       matrix:
         image:
           - "clang:13"
+          - "gcc:11"
         build_type: [Debug, Release]
 
     runs-on: ubuntu-latest
