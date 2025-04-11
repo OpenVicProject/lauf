@@ -123,8 +123,8 @@ LAUF_NOINLINE LAUF_BUILTIN_RETURN_TYPE call_undefined_function(const lauf_asm_in
                                                                lauf_runtime_stack_frame* frame_ptr,
                                                                lauf_runtime_process*     process)
 {
-    auto callee
-        = lauf::uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function, ip->call.offset);
+    auto callee = lauf::new_uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function,
+                                                                         ip->call.offset);
     assert(ip->op() == lauf::asm_op::call && callee->insts == nullptr);
 
     auto definition = [&] {
@@ -271,7 +271,8 @@ LAUF_VM_EXECUTE_BRANCH(gt, >)
 
 LAUF_VM_EXECUTE(panic)
 {
-    auto msg = lauf_runtime_get_cstr(process, vstack_ptr[0].as_address);
+    auto msg
+        = lauf_runtime_get_cstr(process, lauf_runtime_address_from_store(vstack_ptr[0].as_address));
     LAUF_DO_PANIC(msg);
 }
 
@@ -340,10 +341,8 @@ LAUF_VM_EXECUTE(call_builtin_no_regs)
 #if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
 #    undef lauf_runtime_builtin_dispatch
 #endif
-    auto callee
-        = lauf::uncompress_pointer_offset<lauf_runtime_builtin_impl>(&lauf_runtime_builtin_dispatch,
-                                                                     ip->call_builtin_no_regs
-                                                                         .offset);
+    auto callee = lauf::new_uncompress_pointer_offset<
+        lauf_runtime_builtin_impl>(&lauf_runtime_builtin_dispatch, ip->call_builtin_no_regs.offset);
 #if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
 #    define lauf_runtime_builtin_dispatch lauf_runtime_builtin_dispatch_inline
 #endif
@@ -359,8 +358,8 @@ LAUF_VM_EXECUTE(call_builtin_sig)
 
 LAUF_VM_EXECUTE(call)
 {
-    auto callee
-        = lauf::uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function, ip->call.offset);
+    auto callee = lauf::new_uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function,
+                                                                         ip->call.offset);
 
     // Call an extern implementation if necessary.
     if (LAUF_UNLIKELY(callee->insts == nullptr))
@@ -389,8 +388,9 @@ LAUF_VM_EXECUTE(call_indirect)
 //=== fiber instructions ===//
 LAUF_VM_EXECUTE(fiber_resume)
 {
-    auto handle = vstack_ptr[ip->fiber_resume.input_count].as_address;
-    auto fiber  = lauf::get_fiber(process, handle);
+    auto handle
+        = lauf_runtime_address_from_store(vstack_ptr[ip->fiber_resume.input_count].as_address);
+    auto fiber = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
                           && fiber->status != lauf_runtime_fiber::ready)))
@@ -418,8 +418,9 @@ LAUF_VM_EXECUTE(fiber_resume)
 
 LAUF_VM_EXECUTE(fiber_transfer)
 {
-    auto handle = vstack_ptr[ip->fiber_transfer.input_count].as_address;
-    auto fiber  = lauf::get_fiber(process, handle);
+    auto handle
+        = lauf_runtime_address_from_store(vstack_ptr[ip->fiber_transfer.input_count].as_address);
+    auto fiber = lauf::get_fiber(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr
                       || (fiber->status != lauf_runtime_fiber::suspended
                           && fiber->status != lauf_runtime_fiber::ready)))
@@ -521,11 +522,13 @@ LAUF_VM_EXECUTE(global_addr)
 {
     --vstack_ptr;
 
-    LAUF_BITFIELD_CONVERSION(
-        vstack_ptr[0].as_address.allocation
-        = get_global_allocation_idx(frame_ptr, process, ip->global_addr.value));
-    vstack_ptr[0].as_address.offset     = 0;
-    vstack_ptr[0].as_address.generation = 0; // Always true for globals.
+    // Sets offset and generation to 0
+    // generation always 0 for globals.
+    vstack_ptr->as_address.value = 0;
+    lauf_runtime_address_store_set_allocation( //
+        &vstack_ptr[0].as_address,
+        static_cast<uint32_t>(
+            get_global_allocation_idx(frame_ptr, process, ip->global_addr.value)));
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -533,8 +536,8 @@ LAUF_VM_EXECUTE(global_addr)
 
 LAUF_VM_EXECUTE(function_addr)
 {
-    auto fn = lauf::uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function,
-                                                                 ip->function_addr.offset);
+    auto fn = lauf::new_uncompress_pointer_offset<lauf_asm_function>(frame_ptr->function,
+                                                                     ip->function_addr.offset);
 
     --vstack_ptr;
     vstack_ptr[0].as_function_address.index        = fn->function_idx;
@@ -550,9 +553,8 @@ LAUF_VM_EXECUTE(local_addr)
     auto allocation_idx = frame_ptr->first_local_alloc + ip->local_addr.index;
 
     --vstack_ptr;
-    LAUF_BITFIELD_CONVERSION(vstack_ptr[0].as_address.allocation = std::uint32_t(allocation_idx));
-    vstack_ptr[0].as_address.offset     = 0;
-    vstack_ptr[0].as_address.generation = frame_ptr->local_generation;
+    LAUF_BITFIELD_CONVERSION(vstack_ptr[0].as_address = lauf_runtime_address_to_store(
+                                 {std::uint32_t(allocation_idx), frame_ptr->local_generation, 0}));
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -740,7 +742,7 @@ LAUF_VM_EXECUTE(local_storage)
 
 LAUF_VM_EXECUTE(deref_const)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     auto alloc = process->memory.try_get(address);
     if (LAUF_UNLIKELY(alloc == nullptr))
@@ -764,7 +766,7 @@ panic:
 
 LAUF_VM_EXECUTE(deref_mut)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     auto alloc = process->memory.try_get(address);
     if (LAUF_UNLIKELY(alloc == nullptr) || LAUF_UNLIKELY(lauf::is_const(alloc->source)))
@@ -788,13 +790,13 @@ panic:
 
 LAUF_VM_EXECUTE(array_element)
 {
-    auto address = vstack_ptr[1].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[1].as_address);
     auto index   = vstack_ptr[0].as_sint;
 
     address.offset += static_cast<uint32_t>(lauf_sint(ip->array_element.value) * index);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = address;
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(address);
 
     ++ip;
     LAUF_VM_DISPATCH;
@@ -802,9 +804,9 @@ LAUF_VM_EXECUTE(array_element)
 
 LAUF_VM_EXECUTE(aggregate_member)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     address.offset += ip->aggregate_member.value;
-    vstack_ptr[0].as_address = address;
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(address);
 
     ++ip;
     LAUF_VM_DISPATCH;

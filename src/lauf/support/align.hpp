@@ -5,6 +5,9 @@
 #define SRC_LAUF_SUPPORT_ALIGN_HPP_INCLUDED
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <lauf/compiler_instrinsics.hpp>
 #include <lauf/config.h>
 
 namespace lauf
@@ -17,7 +20,7 @@ constexpr bool is_valid_alignment(std::size_t alignment) noexcept
 constexpr std::uint8_t align_log2(std::size_t alignment) noexcept
 {
     assert(is_valid_alignment(alignment));
-    return std::uint8_t(__builtin_ctzll(alignment));
+    return std::uint8_t(lauf_countr_zero_constexpr(alignment));
 }
 
 constexpr std::size_t align_offset(std::uintptr_t address, std::size_t alignment) noexcept
@@ -49,4 +52,3 @@ constexpr std::size_t round_to_multiple_of_alignment(std::size_t size,
 } // namespace lauf
 
 #endif // SRC_LAUF_SUPPORT_ALIGN_HPP_INCLUDED
-

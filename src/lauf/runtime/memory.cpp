@@ -108,10 +108,10 @@ void* lauf_runtime_get_mut_ptr(lauf_runtime_process* p, lauf_runtime_address add
         return nullptr;
 }
 
-bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address* allocation,
+bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address_store* allocation,
                               const void* ptr)
 {
-    auto alloc = p->memory.try_get(*allocation);
+    auto alloc = p->memory.try_get(lauf_runtime_address_from_store(*allocation));
     if (alloc == nullptr)
         return false;
 
@@ -119,7 +119,7 @@ bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address* all
     if (offset < 0 || offset >= alloc->size)
         return false;
 
-    allocation->offset = std::uint32_t(offset);
+    lauf_runtime_address_store_set_offset(allocation, std::uint32_t(offset));
     return true;
 }
 
@@ -300,8 +300,9 @@ size_t lauf_runtime_gc(lauf_runtime_process* p)
         for (auto end = ptr + ((alloc->size - offset) / sizeof(lauf_runtime_value)); ptr != end;
              ++ptr)
         {
-            auto ptr_alloc = p->memory.try_get(ptr->as_address);
-            if (ptr_alloc != nullptr && ptr->as_address.offset <= ptr_alloc->size)
+            auto addr      = lauf_runtime_address_from_store(ptr->as_address);
+            auto ptr_alloc = p->memory.try_get(addr);
+            if (ptr_alloc != nullptr && addr.offset <= ptr_alloc->size)
                 mark_reachable(ptr_alloc);
         }
     };
@@ -320,8 +321,9 @@ size_t lauf_runtime_gc(lauf_runtime_process* p)
         for (auto cur = lauf_runtime_get_vstack_ptr(p, fiber);
              cur != lauf_runtime_get_vstack_base(fiber); ++cur)
         {
-            auto alloc = p->memory.try_get(cur->as_address);
-            if (alloc != nullptr && cur->as_address.offset <= alloc->size)
+            auto addr  = lauf_runtime_address_from_store(cur->as_address);
+            auto alloc = p->memory.try_get(addr);
+            if (alloc != nullptr && addr.offset <= alloc->size)
                 mark_reachable(alloc);
         }
 
@@ -420,7 +422,8 @@ bool lauf_runtime_unpoison_allocation(lauf_runtime_process* p, lauf_runtime_addr
 }
 
 bool lauf_runtime_split_allocation(lauf_runtime_process* p, lauf_runtime_address addr,
-                                   lauf_runtime_address* addr1, lauf_runtime_address* addr2)
+                                   lauf_runtime_address_store* addr1,
+                                   lauf_runtime_address_store* addr2)
 {
     auto alloc = p->memory.try_get(addr);
     if (alloc == nullptr || !lauf::is_usable(alloc->status) || addr.offset >= alloc->size)
@@ -436,7 +439,8 @@ bool lauf_runtime_split_allocation(lauf_runtime_process* p, lauf_runtime_address
                               || alloc->split == lauf::allocation_split::split_last
                           ? lauf::allocation_split::split_last
                           : lauf::allocation_split::split_middle;
-    *addr2          = p->memory.new_allocation(p->vm->page_allocator, new_alloc);
+    *addr2
+        = lauf_runtime_address_to_store(p->memory.new_allocation(p->vm->page_allocator, new_alloc));
 
     // We now modify the original allocation, by shrinking it.
     // If the original allocation was unsplit or the first split, it is the first split.
@@ -446,7 +450,8 @@ bool lauf_runtime_split_allocation(lauf_runtime_process* p, lauf_runtime_address
                            || alloc->split == lauf::allocation_split::split_first
                        ? lauf::allocation_split::split_first
                        : lauf::allocation_split::split_middle;
-    *addr1       = lauf_runtime_address{addr.allocation, addr.generation, 0};
+    *addr1
+        = lauf_runtime_address_to_store(lauf_runtime_address{addr.allocation, addr.generation, 0});
 
     return true;
 }

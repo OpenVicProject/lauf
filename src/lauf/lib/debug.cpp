@@ -19,7 +19,8 @@ void lauf::debug_print(lauf_runtime_process* process, lauf_runtime_value value)
     std::fprintf(stderr, "0x%" PRIX64, value.as_uint);
     std::fprintf(stderr, " (uint = %" PRIu64 ", sint = %" PRId64, value.as_uint, value.as_sint);
 
-    if (auto ptr = lauf_runtime_get_const_ptr(process, value.as_address, {0, 1}))
+    if (auto ptr = lauf_runtime_get_const_ptr( //
+            process, lauf_runtime_address_from_store(value.as_address), {0, 1}))
         std::fprintf(stderr, ", address = %p", ptr);
     else if (value.as_uint == lauf_uint(-1))
         std::fprintf(stderr, ", address = NULL");
@@ -53,7 +54,7 @@ void lauf::debug_print_cstack(lauf_runtime_process* process, const lauf_runtime_
         else
         {
             auto addr = lauf_asm_get_instruction_index(fn, ip);
-            std::fprintf(stderr, "       at <%04lx>\n", addr);
+            std::fprintf(stderr, "       at <%04zx>\n", addr);
         }
 
         ++index;

@@ -34,15 +34,28 @@ target_include_directories(lauf_core SYSTEM INTERFACE ../include)
 target_include_directories(lauf_core PRIVATE ../include .)
 target_link_libraries(lauf_core PRIVATE lauf_warnings foonathan::lexy)
 
-if(NOT LAUF_DISPATCH_JUMP_TABLE)
+if(MSVC)
+    if(NOT LAUF_DISPATCH_JUMP_TABLE)
+        messsage(WARNING "MSVC does not support disabling of jump tables")
+    endif()
+elseif(NOT LAUF_DISPATCH_JUMP_TABLE)
     target_compile_definitions(lauf_core PUBLIC LAUF_CONFIG_DISPATCH_JUMP_TABLE=0)
     target_compile_options(lauf_core PRIVATE -fno-jump-tables)
 endif()
 # Since we're using tail calls for dispatching, we don't want to add frame pointers, ever.
 # They would record all previously executed instructions in the call stack.
-target_compile_options(lauf_core PRIVATE -fomit-frame-pointer)
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_compile_options(lauf_core PRIVATE -fomit-frame-pointer)
+elseif(MSVC)
+    target_compile_options(lauf_core PRIVATE /Oy)
+endif()
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_definitions(lauf_core PUBLIC LAUF_HAS_TAIL_CALL_ELIMINATION=0)
+    endif()
+elseif(MSVC)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_definitions(lauf_core PUBLIC LAUF_HAS_TAIL_CALL_ELIMINATION=0)
     endif()
@@ -107,6 +120,7 @@ target_sources(lauf_core PRIVATE
                 ${src_dir}/runtime/process.cpp
                 ${src_dir}/runtime/stack.hpp
                 ${src_dir}/runtime/stacktrace.cpp
+                ${src_dir}/runtime/value.cpp
 
                 ${src_dir}/lib/bits.cpp
                 ${src_dir}/lib/debug.cpp
