@@ -90,7 +90,8 @@ LAUF_NOINLINE void lauf_runtime_process::do_cleanup(lauf_runtime_process* proces
                 // We don't know the full size.
                 vm->heap_allocator.free_alloc(vm->heap_allocator.user_data, alloc.ptr, 0);
             else
-                ; // We don't know the starting address of the allocation.
+            { // We don't know the starting address of the allocation.
+            }
         }
         else if (alloc.source == lauf::allocation_source::fiber_memory)
         {
@@ -156,6 +157,7 @@ lauf_runtime_fiber_status lauf_runtime_get_fiber_status(const lauf_runtime_fiber
     case lauf_runtime_fiber::running:
         return LAUF_RUNTIME_FIBER_RUNNING;
     }
+    LAUF_UNREACHABLE;
 }
 
 lauf_runtime_fiber* lauf_runtime_get_fiber_parent(lauf_runtime_process* process,
@@ -386,4 +388,3 @@ bool lauf_runtime_increment_step(lauf_runtime_process* process)
 
     return true;
 }
-

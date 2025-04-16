@@ -4,6 +4,7 @@
 #ifndef SRC_LAUF_SUPPORT_ARRAY_HPP_INCLUDED
 #define SRC_LAUF_SUPPORT_ARRAY_HPP_INCLUDED
 
+#include <algorithm>
 #include <cassert>
 #include <lauf/config.h>
 #include <lauf/support/arena.hpp>
@@ -181,12 +182,11 @@ public:
         }
 
         auto new_capacity = 2 * _capacity;
-        if (new_capacity < new_size)
-            new_capacity = new_size;
+        new_capacity      = std::max(new_capacity, new_size);
 
         if (!_is_heap && arena.try_expand(_ptr, _capacity, new_capacity))
         {
-            _capacity = new_capacity;
+            LAUF_BITFIELD_CONVERSION(_capacity = new_capacity);
         }
         else
         {
@@ -195,9 +195,9 @@ public:
             if (_is_heap)
                 ::operator delete(_ptr);
 
-            _ptr      = static_cast<T*>(new_memory);
-            _capacity = new_capacity;
-            _is_heap  = true;
+            _ptr = static_cast<T*>(new_memory);
+            LAUF_BITFIELD_CONVERSION(_capacity = new_capacity);
+            _is_heap = true;
         }
     }
 
@@ -207,8 +207,7 @@ public:
             return;
 
         auto new_capacity = 2 * _capacity;
-        if (new_capacity < new_size)
-            new_capacity = new_size;
+        new_capacity      = std::max(new_capacity, new_size);
 
         if (_capacity == 0)
         {
@@ -228,7 +227,7 @@ public:
             }
             else
             {
-                _capacity = extended_page_size / sizeof(T);
+                LAUF_BITFIELD_CONVERSION(_capacity = extended_page_size / sizeof(T));
             }
         }
     }
@@ -293,8 +292,8 @@ private:
     }
     void set_pages(page_block block)
     {
-        _ptr      = static_cast<T*>(block.ptr);
-        _capacity = block.size / sizeof(T);
+        _ptr = static_cast<T*>(block.ptr);
+        LAUF_BITFIELD_CONVERSION(_capacity = block.size / sizeof(T));
     }
 
     T*          _ptr;
@@ -305,4 +304,3 @@ private:
 } // namespace lauf
 
 #endif // SRC_LAUF_SUPPORT_ARRAY_HPP_INCLUDED
-

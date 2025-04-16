@@ -308,4 +308,3 @@ void lauf_asm_inst_store_field(lauf_asm_builder* b, lauf_asm_type type, size_t f
 LAUF_HEADER_END
 
 #endif // LAUF_ASM_BUILDER_H_INCLUDED
-

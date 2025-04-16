@@ -36,22 +36,44 @@ typedef uint64_t lauf_uint;
 #    error "lauf assumes 8 bit bytes"
 #endif
 
-#if !defined(__clang__)
-#    error "lauf currently requires clang"
-#endif
-
 //=== optimizations ===//
-#define LAUF_LIKELY(Cond) __builtin_expect((Cond), 1)
-#define LAUF_UNLIKELY(Cond) __builtin_expect((Cond), 0)
-#define LAUF_TAIL_CALL [[clang::musttail]]
-#define LAUF_NOINLINE [[gnu::noinline]]
-#define LAUF_FORCE_INLINE [[gnu::always_inline]]
-#define LAUF_UNREACHABLE __builtin_unreachable()
+#if defined(__GNUC__) || defined(__GNUG__)
+#    define LAUF_LIKELY(Cond) __builtin_expect((Cond), 1)
+#    define LAUF_UNLIKELY(Cond) __builtin_expect((Cond), 0)
+#    if defined(__has_cpp_attribute)
+#        if __has_cpp_attribute(clang::musttail)
+#            define LAUF_TAIL_CALL [[clang::musttail]]
+#        elif defined(__clang__)
+#            define LAUF_TAIL_CALL [[clang::musttail]]
+#        else
+#            define LAUF_TAIL_CALL
+#        endif
+#    endif
+#    define LAUF_NOINLINE [[gnu::noinline]]
+#    define LAUF_FORCE_INLINE [[gnu::always_inline]] inline
+#    define LAUF_UNREACHABLE __builtin_unreachable()
+#endif
 
 //=== configurations ===//
 #ifndef LAUF_CONFIG_DISPATCH_JUMP_TABLE
 #    define LAUF_CONFIG_DISPATCH_JUMP_TABLE 1
 #endif
 
-#endif // LAUF_CONFIG_H_INCLUDED
+#if defined(__has_cpp_attribute)
+#    if __has_cpp_attribute(clang::musttail)
+#        define LAUF_HAS_TAIL_CALL_ELIMINATION 1
+#    endif
+#endif
 
+//=== warnings ===//
+#if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
+#    define LAUF_BITFIELD_CONVERSION(...)                                                          \
+        _Pragma("GCC diagnostic push");                                                            \
+        _Pragma("GCC diagnostic ignored \"-Wconversion\"");                                        \
+        __VA_ARGS__;                                                                               \
+        _Pragma("GCC diagnostic pop")
+#else
+#    define LAUF_BITFIELD_CONVERSION(...) __VA_ARGS__
+#endif
+
+#endif // LAUF_CONFIG_H_INCLUDED

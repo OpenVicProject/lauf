@@ -494,4 +494,3 @@ TEST_CASE("lauf_asm_define_native_function")
 
     lauf_asm_destroy_module(mod);
 }
-

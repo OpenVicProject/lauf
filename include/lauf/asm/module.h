@@ -156,4 +156,3 @@ bool               lauf_asm_chunk_is_empty(const lauf_asm_chunk* chunk);
 LAUF_HEADER_END
 
 #endif // LAUF_ASM_MODULE_H_INCLUDED
-

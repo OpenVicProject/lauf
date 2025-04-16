@@ -126,7 +126,7 @@ bool lauf_runtime_get_address(lauf_runtime_process* p, lauf_runtime_address* all
 lauf_runtime_address lauf_runtime_get_global_address(lauf_runtime_process*,
                                                      const lauf_asm_global* global)
 {
-    return {global->allocation_idx, 0, 0};
+    LAUF_BITFIELD_CONVERSION(return {global->allocation_idx, 0, 0});
 }
 
 const char* lauf_runtime_get_cstr(lauf_runtime_process* p, lauf_runtime_address addr)
@@ -295,9 +295,9 @@ size_t lauf_runtime_gc(lauf_runtime_process* p)
         // (We've done a size check already, so the initial offset is fine)
         auto offset = lauf::align_offset(alloc->ptr, alignof(lauf_runtime_value));
         auto ptr    = reinterpret_cast<lauf_runtime_value*>(static_cast<unsigned char*>(alloc->ptr)
-                                                         + offset);
+                                                            + offset);
 
-        for (auto end = ptr + (alloc->size - offset) / sizeof(lauf_runtime_value); ptr != end;
+        for (auto end = ptr + ((alloc->size - offset) / sizeof(lauf_runtime_value)); ptr != end;
              ++ptr)
         {
             auto ptr_alloc = p->memory.try_get(ptr->as_address);
@@ -527,4 +527,3 @@ bool lauf_runtime_undeclare_weak(lauf_runtime_process* p, lauf_runtime_address a
     alloc->is_gc_weak = false;
     return true;
 }
-
