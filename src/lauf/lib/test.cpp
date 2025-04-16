@@ -62,7 +62,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_eq, 2, 0, LAUF_RUNTIME_BUILTIN_NO_PROC
 LAUF_RUNTIME_BUILTIN(lauf_lib_test_assert_panic, 2, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "assert_panic",
                      &lauf_lib_test_assert_eq)
 {
-    auto expected_msg = lauf_runtime_get_cstr(process, vstack_ptr[0].as_address);
+    auto expected_msg
+        = lauf_runtime_get_cstr(process, lauf_runtime_address_from_store(vstack_ptr[0].as_address));
     auto fn = lauf_runtime_get_function_ptr(process, vstack_ptr[1].as_function_address, {0, 0});
     vstack_ptr += 2;
 

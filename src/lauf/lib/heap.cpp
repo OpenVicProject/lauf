@@ -24,7 +24,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_alloc, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "a
     auto address = lauf_runtime_add_heap_allocation(process, memory, size);
 
     ++vstack_ptr;
-    vstack_ptr[0].as_address = address;
+    vstack_ptr[0].as_address = lauf_runtime_address_to_store(address);
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -47,7 +47,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_alloc_array, 3, 1, LAUF_RUNTIME_BUILTIN_DEFAU
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_free, 1, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "free",
                      &lauf_lib_heap_alloc_array)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     lauf_runtime_allocation alloc;
@@ -64,7 +64,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_free, 1, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "fr
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_transfer_local, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
                      "transfer_local", &lauf_lib_heap_free)
 {
-    auto address = vstack_ptr[0].as_address;
+    auto address = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
 
     lauf_runtime_allocation alloc;
     if (!lauf_runtime_get_allocation(process, address, &alloc)
@@ -80,7 +80,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_transfer_local, 1, 1, LAUF_RUNTIME_BUILTIN_DE
 
         std::memcpy(memory, alloc.ptr, alloc.size);
 
-        vstack_ptr[0].as_address = lauf_runtime_add_heap_allocation(process, memory, alloc.size);
+        vstack_ptr[0].as_address = lauf_runtime_address_to_store(
+            lauf_runtime_add_heap_allocation(process, memory, alloc.size));
     }
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
@@ -100,7 +101,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_gc, 0, 1, LAUF_RUNTIME_BUILTIN_NO_PANIC, "gc"
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_reachable, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE,
                      "declare_reachable", &lauf_lib_heap_gc)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_declare_reachable(process, addr))
@@ -112,7 +113,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_reachable, 1, 0, LAUF_RUNTIME_BUILTIN
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_undeclare_reachable, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE,
                      "undeclare_reachable", &lauf_lib_heap_declare_reachable)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_undeclare_reachable(process, addr))
@@ -124,7 +125,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_undeclare_reachable, 1, 0, LAUF_RUNTIME_BUILT
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_weak, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE,
                      "declare_weak", &lauf_lib_heap_undeclare_reachable)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_declare_weak(process, addr))
@@ -136,7 +137,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_weak, 1, 0, LAUF_RUNTIME_BUILTIN_VM_D
 LAUF_RUNTIME_BUILTIN(lauf_lib_heap_undeclare_weak, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIRECTIVE,
                      "undeclare_weak", &lauf_lib_heap_declare_weak)
 {
-    auto addr = vstack_ptr[0].as_address;
+    auto addr = lauf_runtime_address_from_store(vstack_ptr[0].as_address);
     ++vstack_ptr;
 
     if (!lauf_runtime_undeclare_weak(process, addr))

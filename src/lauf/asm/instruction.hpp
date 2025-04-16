@@ -48,25 +48,149 @@ struct asm_inst_none
     asm_op op;
 };
 
+#ifdef _MSC_VER
+struct SignedTrait
+{
+    using bit8_t          = std::int8_t;
+    using bit16_t         = std::int16_t;
+    using bit32_t         = std::int32_t;
+    using inverse_bit32_t = std::uint32_t;
+};
+struct UnsignedTrait
+{
+    using bit8_t          = std::uint8_t;
+    using bit16_t         = std::uint16_t;
+    using bit32_t         = std::uint32_t;
+    using inverse_bit32_t = std::int32_t;
+};
+// MSVC tends not to respect bit-fields for packing
+#    pragma pack(push, 1)
+template <typename SignTrait>
+struct _24bitint
+{
+    typename SignTrait::bit8_t  value_b1 : 8;
+    typename SignTrait::bit16_t value_b2 : 16;
+
+    LAUF_FORCE_INLINE constexpr _24bitint() = default;
+    LAUF_FORCE_INLINE constexpr _24bitint(typename SignTrait::bit32_t value)
+    {
+        *this = value;
+    }
+
+    struct int_converter
+    {
+        typename SignTrait::bit8_t  value_b1{};
+        typename SignTrait::bit16_t value_b2{};
+        typename SignTrait::bit8_t  value_b3{};
+    };
+
+    LAUF_FORCE_INLINE constexpr _24bitint& operator=(typename SignTrait::bit32_t lhs)
+    {
+        int_converter converter = __builtin_bit_cast(decltype(converter), lhs);
+        value_b1                = converter.value_b1;
+        value_b2                = converter.value_b2;
+        return *this;
+    }
+
+    LAUF_FORCE_INLINE constexpr operator typename SignTrait::bit32_t() const
+    {
+        int_converter converter{};
+        converter.value_b1 = value_b1;
+        converter.value_b2 = value_b2;
+        if constexpr (!std::is_unsigned_v<typename SignTrait::bit8_t>)
+        {
+            converter.value_b3 = value_b2 >> 15;
+        }
+        return __builtin_bit_cast(typename SignTrait::bit32_t, converter);
+    }
+
+    LAUF_FORCE_INLINE constexpr explicit operator typename SignTrait::inverse_bit32_t() const
+    {
+        int_converter converter{};
+        converter.value_b1 = value_b1;
+        converter.value_b2 = value_b2;
+        return __builtin_bit_cast(typename SignTrait::bit32_t, converter);
+    }
+
+    template <typename T>
+    LAUF_FORCE_INLINE constexpr explicit operator T() const
+    {
+        if constexpr (std::is_unsigned_v<T> == std::is_unsigned_v<typename SignTrait::bit32_t>)
+        {
+            return static_cast<T>(static_cast<typename SignTrait::bit32_t>(*this));
+        }
+        else
+        {
+            return static_cast<T>(static_cast<typename SignTrait::inverse_bit32_t>(*this));
+        }
+    }
+
+    LAUF_FORCE_INLINE constexpr _24bitint operator+() const
+    {
+        return *this;
+    }
+
+    LAUF_FORCE_INLINE constexpr _24bitint operator-() const
+    {
+        return _24bitint{-static_cast<typename SignTrait::bit32_t>(*this)};
+    }
+
+    LAUF_FORCE_INLINE constexpr _24bitint operator~() const
+    {
+        return _24bitint{~static_cast<typename SignTrait::bit32_t>(*this)};
+    }
+
+    LAUF_FORCE_INLINE _24bitint& operator++()
+    {
+        return *this = *this + 1;
+    }
+
+    LAUF_FORCE_INLINE _24bitint operator++(int)
+    {
+        _24bitint result{*this};
+        ++(*this);
+        return result;
+    }
+
+    LAUF_FORCE_INLINE _24bitint& operator--()
+    {
+        return *this = *this - 1;
+    }
+
+    LAUF_FORCE_INLINE _24bitint operator--(int)
+    {
+        _24bitint result(*this);
+        --(*this);
+        return result;
+    }
+};
+#    pragma pack(pop)
+using int24_t  = _24bitint<SignedTrait>;
+using uint24_t = _24bitint<UnsignedTrait>;
+#endif
+
 struct asm_inst_offset
 {
-    asm_op       op : 8;
+    asm_op op : 8;
+#ifdef _MSC_VER
+    lauf::int24_t offset;
+#else
     std::int32_t offset : 24;
+#endif
 };
 
 template <typename CurType, typename DestType>
 std::ptrdiff_t compress_pointer_offset(CurType* _cur, DestType* _dest)
 {
-    auto cur  = (void*)(_cur);
-    auto dest = (void*)(_dest);
-    assert(is_aligned(cur, alignof(void*)) && is_aligned(dest, alignof(void*)));
-    return (void**)dest - (void**)cur;
+    auto cur  = (char*)(_cur);
+    auto dest = (char*)(_dest);
+    return _dest ? dest - cur : 0;
 }
 
 template <typename DestType, typename CurType>
 const DestType* uncompress_pointer_offset(CurType* cur, std::ptrdiff_t offset)
 {
-    return (const DestType*)(reinterpret_cast<void* const*>(cur) + offset);
+    return (DestType*)(reinterpret_cast<const char*>(cur) + offset);
 }
 
 struct asm_inst_signature
@@ -91,8 +215,12 @@ struct asm_inst_layout
 
 struct asm_inst_value
 {
-    asm_op        op : 8;
+    asm_op op : 8;
+#ifdef _MSC_VER
+    lauf::uint24_t value;
+#else
     std::uint32_t value : 24;
+#endif
 };
 
 struct asm_inst_stack_idx
@@ -127,4 +255,3 @@ union lauf_asm_inst
 };
 
 #endif // SRC_LAUF_ASM_INSTRUCTION_HPP_INCLUDED
-

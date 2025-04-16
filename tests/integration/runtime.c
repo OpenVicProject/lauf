@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,12 @@ void lauf_panic(const char* msg)
 
 void* lauf_heap_alloc(uint64_t size, uint64_t alignment)
 {
+#ifdef _MSC_VER
+    alignment = (alignment > 0) && ((alignment & (alignment - 1)) == 0) ? alignment : 16;
+    return _aligned_malloc(size, alignment);
+#else
     return aligned_alloc(alignment, size);
+#endif
 }
 
 void* lauf_heap_alloc_array(uint64_t count, uint64_t size, uint64_t alignment)
@@ -23,7 +29,11 @@ void* lauf_heap_alloc_array(uint64_t count, uint64_t size, uint64_t alignment)
 
 void lauf_heap_free(void* ptr)
 {
+#ifdef _MSC_VER
+    _aligned_free(ptr);
+#else
     free(ptr);
+#endif
 }
 
 uint64_t lauf_heap_gc(void)

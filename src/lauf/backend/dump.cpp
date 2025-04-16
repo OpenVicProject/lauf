@@ -369,4 +369,3 @@ void lauf_backend_dump_chunk(lauf_writer* writer, lauf_backend_dump_options opti
     dump_module_header(writer, mod);
     dump_function(writer, options, mod, chunk->fn);
 }
-

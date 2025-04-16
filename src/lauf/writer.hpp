@@ -17,8 +17,10 @@ struct lauf_writer
 
     void write(const char* str);
 
-    [[gnu::format(printf, 2, 3)]] void format(const char* fmt, ...);
+#if !defined(_MSC_VER)
+    [[gnu::format(printf, 2, 3)]]
+#endif
+    void format(const char* fmt, ...);
 };
 
 #endif // SRC_LAUF_WRITER_HPP_INCLUDED
-
