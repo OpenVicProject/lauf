@@ -17,7 +17,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_poison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIREC
     ++vstack_ptr;
 
     if (!lauf_runtime_poison_allocation(process, address))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -29,7 +29,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_unpoison, 1, 0, LAUF_RUNTIME_BUILTIN_VM_DIR
     ++vstack_ptr;
 
     if (!lauf_runtime_unpoison_allocation(process, address))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -42,7 +42,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_split, 1, 2, LAUF_RUNTIME_BUILTIN_DEFAULT, 
     --vstack_ptr;
     if (!lauf_runtime_split_allocation(process, addr, &vstack_ptr[1].as_address,
                                        &vstack_ptr[0].as_address))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -55,7 +55,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_merge, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, 
     ++vstack_ptr;
 
     if (!lauf_runtime_merge_allocation(process, addr1, addr2))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -67,7 +67,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_to_int, 1, 2, LAUF_RUNTIME_BUILTIN_DEF
 
     auto ptr = lauf_runtime_get_const_ptr(process, addr, {0, 1});
     if (ptr == nullptr)
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
     auto provenance = lauf_runtime_address{addr.allocation, addr.generation, 0};
 
     --vstack_ptr;
@@ -83,7 +83,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_int_to_addr, 2, 1, LAUF_RUNTIME_BUILTIN_DEF
     auto ptr        = reinterpret_cast<unsigned char*>(vstack_ptr[0].as_uint); // NOLINT
 
     if (!lauf_runtime_get_address(process, &provenance, ptr))
-        return lauf_runtime_panic(process, "invalid int for int_to_addr");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid int for int_to_addr"));
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = provenance;
@@ -136,7 +136,7 @@ LAUF_RUNTIME_BUILTIN(addr_add_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_a
 
     auto new_offset = addr_offset(addr, offset);
     if (!validate_addr_offset<false>(process, addr, new_offset))
-        return false;
+        LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
@@ -150,7 +150,7 @@ LAUF_RUNTIME_BUILTIN(addr_add_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
 
     auto new_offset = addr_offset(addr, offset);
     if (!validate_addr_offset<true>(process, addr, new_offset))
-        return false;
+        LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
@@ -177,7 +177,7 @@ LAUF_RUNTIME_BUILTIN(addr_sub_panic, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "addr_s
 
     auto new_offset = addr_offset(addr, -offset);
     if (!validate_addr_offset<false>(process, addr, new_offset))
-        return false;
+        LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
@@ -191,7 +191,7 @@ LAUF_RUNTIME_BUILTIN(addr_sub_panic_strict, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT,
 
     auto new_offset = addr_offset(addr, -offset);
     if (!validate_addr_offset<true>(process, addr, new_offset))
-        return false;
+        LAUF_BUILTIN_RETURN(false);
 
     ++vstack_ptr;
     vstack_ptr[0].as_address = {addr.allocation, addr.generation, new_offset};
@@ -234,7 +234,8 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_addr_distance, 2, 1, LAUF_RUNTIME_BUILTIN_D
     auto rhs = vstack_ptr[0].as_address;
 
     if (lhs.allocation != rhs.allocation || lhs.generation != rhs.generation)
-        return lauf_runtime_panic(process, "addresses are from different allocations");
+        LAUF_BUILTIN_RETURN(
+            lauf_runtime_panic(process, "addresses are from different allocations"));
 
     auto distance = lauf_sint(lhs.offset) - lauf_sint(rhs.offset);
 
@@ -253,7 +254,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_copy, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "
     auto dest_ptr = lauf_runtime_get_mut_ptr(process, dest, {count, 1});
     auto src_ptr  = lauf_runtime_get_const_ptr(process, src, {count, 1});
     if (dest_ptr == nullptr || src_ptr == nullptr)
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     std::memmove(dest_ptr, src_ptr, count);
 
@@ -270,7 +271,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_fill, 3, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "
 
     auto dest_ptr = lauf_runtime_get_mut_ptr(process, dest, {count, 1});
     if (dest_ptr == nullptr)
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     std::memset(dest_ptr, static_cast<unsigned char>(byte), count);
 
@@ -288,7 +289,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_memory_cmp, 3, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "c
     auto lhs_ptr = lauf_runtime_get_const_ptr(process, lhs, {count, 1});
     auto rhs_ptr = lauf_runtime_get_const_ptr(process, rhs, {count, 1});
     if (lhs_ptr == nullptr || rhs_ptr == nullptr)
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     auto result = std::memcmp(lhs_ptr, rhs_ptr, count);
 

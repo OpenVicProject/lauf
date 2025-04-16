@@ -14,7 +14,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_create, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, 
 
     auto fn = lauf_runtime_get_function_ptr_any(process, address);
     if (LAUF_UNLIKELY(fn == nullptr))
-        return lauf_runtime_panic(process, "invalid function address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid function address"));
 
     auto fiber               = lauf_runtime_create_fiber(process, fn);
     vstack_ptr[0].as_address = lauf_runtime_get_fiber_handle(fiber);
@@ -30,10 +30,10 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_destroy, 1, 0, LAUF_RUNTIME_BUILTIN_DEFAULT,
 
     auto fiber = lauf_runtime_get_fiber_ptr(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr))
-        return lauf_runtime_panic(process, "invalid fiber handle");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid fiber handle"));
 
     if (LAUF_UNLIKELY(!lauf_runtime_destroy_fiber(process, fiber)))
-        return false;
+        LAUF_BUILTIN_RETURN(false);
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -70,7 +70,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_done, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "d
     auto handle = vstack_ptr[0].as_address;
     auto fiber  = lauf_runtime_get_fiber_ptr(process, handle);
     if (LAUF_UNLIKELY(fiber == nullptr))
-        return lauf_runtime_panic(process, "invalid fiber handle");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid fiber handle"));
 
     auto status           = lauf_runtime_get_fiber_status(fiber);
     vstack_ptr[0].as_uint = status == LAUF_RUNTIME_FIBER_DONE ? 1 : 0;
@@ -79,4 +79,3 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_fiber_done, 1, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "d
 }
 
 const lauf_runtime_builtin_library lauf_lib_fiber = {"lauf.fiber", &lauf_lib_fiber_done, nullptr};
-

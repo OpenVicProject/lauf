@@ -14,14 +14,27 @@ namespace lauf
 
 extern lauf_runtime_builtin_impl* const _vm_dispatch_table[];
 
-#    define LAUF_VM_DISPATCH                                                                       \
-        LAUF_TAIL_CALL return lauf::_vm_dispatch_table[int(ip->op())](ip, vstack_ptr, frame_ptr,   \
-                                                                      process)
+#    if LAUF_HAS_TAIL_CALL_ELIMINATION
+#        define LAUF_VM_DISPATCH                                                                   \
+            LAUF_TAIL_CALL return lauf::_vm_dispatch_table[int(ip->op())](ip, vstack_ptr,          \
+                                                                          frame_ptr, process)
+#    else
+#        define LAUF_VM_DISPATCH                                                                   \
+            return                                                                                 \
+            {                                                                                      \
+                .function                                                                          \
+                {                                                                                  \
+                    true, lauf::_vm_dispatch_table[int(ip->op())], ip, vstack_ptr, frame_ptr,      \
+                        process                                                                    \
+                }                                                                                  \
+            }
+#    endif
 
 #else
 
-bool _vm_dispatch(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                  lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process);
+LAUF_BUILTIN_RETURN_TYPE _vm_dispatch(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
+                                      lauf_runtime_stack_frame* frame_ptr,
+                                      lauf_runtime_process*     process);
 
 #    define LAUF_VM_DISPATCH                                                                       \
         LAUF_TAIL_CALL return lauf::_vm_dispatch(ip, vstack_ptr, frame_ptr, process)
@@ -50,8 +63,9 @@ constexpr lauf_asm_inst trampoline_code[3] = {
     }(),
 };
 
-inline bool execute(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                    lauf_runtime_stack_frame* frame_ptr, lauf_runtime_process* process)
+inline LAUF_BUILTIN_RETURN_TYPE execute(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
+                                        lauf_runtime_stack_frame* frame_ptr,
+                                        lauf_runtime_process*     process)
 {
     LAUF_VM_DISPATCH;
 }
@@ -60,13 +74,16 @@ inline bool execute(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
 // Clang supports inline of previously non-inlined function
 // GCC does
 #if !defined(__clang__) && (defined(__GNUC__) || defined(__GNUG__))
-extern "C" [[gnu::always_inline]] inline bool lauf_runtime_builtin_dispatch_inline(
-    const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr, lauf_runtime_stack_frame* frame_ptr,
-    lauf_runtime_process* process)
+extern "C" [[gnu::always_inline]] inline LAUF_BUILTIN_RETURN_TYPE
+    lauf_runtime_builtin_dispatch_inline(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
+                                         lauf_runtime_stack_frame* frame_ptr,
+                                         lauf_runtime_process*     process)
 #else
-inline bool lauf_runtime_builtin_dispatch(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                          lauf_runtime_stack_frame* frame_ptr,
-                                          lauf_runtime_process*     process)
+inline LAUF_BUILTIN_RETURN_TYPE lauf_runtime_builtin_dispatch(const lauf_asm_inst*      ip,
+                                                              lauf_runtime_value*       vstack_ptr,
+                                                              lauf_runtime_stack_frame* frame_ptr,
+                                                              lauf_runtime_process*     process)
+
 #endif
 {
     assert(ip[1].op() == lauf::asm_op::call_builtin_sig);

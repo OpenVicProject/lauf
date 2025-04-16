@@ -19,7 +19,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_alloc, 2, 1, LAUF_RUNTIME_BUILTIN_DEFAULT, "a
     auto allocator = lauf_vm_get_allocator(lauf_runtime_get_vm(process));
     auto memory    = allocator.heap_alloc(allocator.user_data, size, alignment);
     if (memory == nullptr)
-        return lauf_runtime_panic(process, "out of memory");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "out of memory"));
 
     auto address = lauf_runtime_add_heap_allocation(process, memory, size);
 
@@ -53,7 +53,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_free, 1, 0, LAUF_RUNTIME_BUILTIN_DEFAULT, "fr
     lauf_runtime_allocation alloc;
     if (!lauf_runtime_get_allocation(process, address, &alloc)
         || !lauf_runtime_leak_heap_allocation(process, address))
-        return lauf_runtime_panic(process, "invalid heap address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid heap address"));
 
     auto allocator = lauf_vm_get_allocator(lauf_runtime_get_vm(process));
     allocator.free_alloc(allocator.user_data, alloc.ptr, alloc.size);
@@ -69,14 +69,14 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_transfer_local, 1, 1, LAUF_RUNTIME_BUILTIN_DE
     lauf_runtime_allocation alloc;
     if (!lauf_runtime_get_allocation(process, address, &alloc)
         || (alloc.permission & LAUF_RUNTIME_PERM_READ) == 0)
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     if (alloc.source == LAUF_RUNTIME_LOCAL_ALLOCATION)
     {
         auto allocator = lauf_vm_get_allocator(lauf_runtime_get_vm(process));
         auto memory    = allocator.heap_alloc(allocator.user_data, alloc.size, alignof(void*));
         if (memory == nullptr)
-            return lauf_runtime_panic(process, "out of memory");
+            LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "out of memory"));
 
         std::memcpy(memory, alloc.ptr, alloc.size);
 
@@ -104,7 +104,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_reachable, 1, 0, LAUF_RUNTIME_BUILTIN
     ++vstack_ptr;
 
     if (!lauf_runtime_declare_reachable(process, addr))
-        return lauf_runtime_panic(process, "invalid heap address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid heap address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -116,7 +116,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_undeclare_reachable, 1, 0, LAUF_RUNTIME_BUILT
     ++vstack_ptr;
 
     if (!lauf_runtime_undeclare_reachable(process, addr))
-        return lauf_runtime_panic(process, "invalid heap address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid heap address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -128,7 +128,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_declare_weak, 1, 0, LAUF_RUNTIME_BUILTIN_VM_D
     ++vstack_ptr;
 
     if (!lauf_runtime_declare_weak(process, addr))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -140,11 +140,10 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_heap_undeclare_weak, 1, 0, LAUF_RUNTIME_BUILTIN_VM
     ++vstack_ptr;
 
     if (!lauf_runtime_undeclare_weak(process, addr))
-        return lauf_runtime_panic(process, "invalid address");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "invalid address"));
 
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
 const lauf_runtime_builtin_library lauf_lib_heap
     = {"lauf.heap", &lauf_lib_heap_undeclare_weak, nullptr};
-

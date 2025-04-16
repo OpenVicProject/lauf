@@ -42,6 +42,12 @@ endif()
 # They would record all previously executed instructions in the call stack.
 target_compile_options(lauf_core PRIVATE -fomit-frame-pointer)
 
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_definitions(lauf_core PUBLIC LAUF_HAS_TAIL_CALL_ELIMINATION=0)
+    endif()
+endif()
+
 target_sources(lauf_core PUBLIC
                 ${include_dir}/config.h
                 ${include_dir}/reader.h

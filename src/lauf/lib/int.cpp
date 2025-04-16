@@ -67,7 +67,7 @@ LAUF_RUNTIME_BUILTIN(sadd_panic, 2, 1, panic_flags, "sadd_panic", &sadd_sat)
     auto overflow = __builtin_add_overflow(vstack_ptr[1].as_sint, vstack_ptr[0].as_sint,
                                            &vstack_ptr[1].as_sint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -109,7 +109,7 @@ LAUF_RUNTIME_BUILTIN(ssub_panic, 2, 1, panic_flags, "ssub_panic", &ssub_sat)
     auto overflow = __builtin_sub_overflow(vstack_ptr[1].as_sint, vstack_ptr[0].as_sint,
                                            &vstack_ptr[1].as_sint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -152,7 +152,7 @@ LAUF_RUNTIME_BUILTIN(smul_panic, 2, 1, panic_flags, "smul_panic", &smul_sat)
     auto overflow = __builtin_mul_overflow(vstack_ptr[1].as_sint, vstack_ptr[0].as_sint,
                                            &vstack_ptr[1].as_sint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -189,7 +189,7 @@ LAUF_RUNTIME_BUILTIN(uadd_panic, 2, 1, panic_flags, "uadd_panic", &uadd_sat)
     auto overflow = __builtin_add_overflow(vstack_ptr[1].as_uint, vstack_ptr[0].as_uint,
                                            &vstack_ptr[1].as_uint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -226,7 +226,7 @@ LAUF_RUNTIME_BUILTIN(usub_panic, 2, 1, panic_flags, "usub_panic", &usub_sat)
     auto overflow = __builtin_sub_overflow(vstack_ptr[1].as_uint, vstack_ptr[0].as_uint,
                                            &vstack_ptr[1].as_uint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -263,7 +263,7 @@ LAUF_RUNTIME_BUILTIN(umul_panic, 2, 1, panic_flags, "umul_panic", &umul_sat)
     auto overflow = __builtin_mul_overflow(vstack_ptr[1].as_uint, vstack_ptr[0].as_uint,
                                            &vstack_ptr[1].as_uint);
     if (overflow)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     ++vstack_ptr;
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
@@ -278,7 +278,7 @@ LAUF_RUNTIME_BUILTIN(sdiv_flag, 2, 2, panic_flags, "sdiv_flag", &umul_panic)
     auto lhs = vstack_ptr[1].as_sint;
     auto rhs = vstack_ptr[0].as_sint;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
 
     if (lhs == INT64_MIN && rhs == -1)
     {
@@ -298,7 +298,7 @@ LAUF_RUNTIME_BUILTIN(sdiv_wrap, 2, 1, panic_flags, "sdiv_wrap", &sdiv_flag)
     auto lhs = vstack_ptr[1].as_sint;
     auto rhs = vstack_ptr[0].as_sint;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
 
     ++vstack_ptr;
     if (lhs == INT64_MIN && rhs == -1)
@@ -313,7 +313,7 @@ LAUF_RUNTIME_BUILTIN(sdiv_sat, 2, 1, panic_flags, "sdiv_sat", &sdiv_wrap)
     auto lhs = vstack_ptr[1].as_sint;
     auto rhs = vstack_ptr[0].as_sint;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
 
     ++vstack_ptr;
     if (lhs == INT64_MIN && rhs == -1)
@@ -328,11 +328,11 @@ LAUF_RUNTIME_BUILTIN(sdiv_panic, 2, 1, panic_flags, "sdiv_panic", &sdiv_sat)
     auto lhs = vstack_ptr[1].as_sint;
     auto rhs = vstack_ptr[0].as_sint;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
 
     ++vstack_ptr;
     if (lhs == INT64_MIN && rhs == -1)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     else
         vstack_ptr[0].as_sint = lhs / rhs;
 
@@ -347,7 +347,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_udiv, 2, 1, panic_flags, "udiv", &sdiv_panic)
     auto lhs = vstack_ptr[1].as_uint;
     auto rhs = vstack_ptr[0].as_uint;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
 
     ++vstack_ptr;
     vstack_ptr[0].as_uint = lhs / rhs;
@@ -361,7 +361,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_srem, 2, 1, panic_flags, "srem", &lauf_lib_int
 
     ++vstack_ptr;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
     else if (lhs == INT64_MIN && rhs == -1)
         // lhs % rhs is actually UB for those values!
         vstack_ptr[0].as_sint = 0;
@@ -378,7 +378,7 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_urem, 2, 1, panic_flags, "urem", &lauf_lib_int
 
     ++vstack_ptr;
     if (rhs == 0)
-        return lauf_runtime_panic(process, "division by zero");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "division by zero"));
     else
         vstack_ptr[0].as_uint = lhs % rhs;
 
@@ -424,7 +424,7 @@ LAUF_RUNTIME_BUILTIN(stou_sat, 1, 1, no_panic_flags, "stou_sat", &stou_wrap)
 LAUF_RUNTIME_BUILTIN(stou_panic, 1, 1, panic_flags, "stou_panic", &stou_sat)
 {
     if (vstack_ptr[0].as_sint < 0)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 
@@ -448,7 +448,7 @@ LAUF_RUNTIME_BUILTIN(utos_sat, 1, 1, no_panic_flags, "utos_sat", &utos_wrap)
 LAUF_RUNTIME_BUILTIN(utos_panic, 1, 1, panic_flags, "utos_panic", &utos_sat)
 {
     if (vstack_ptr[0].as_uint > INT64_MAX)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     LAUF_RUNTIME_BUILTIN_DISPATCH;
 }
 } // namespace
@@ -502,7 +502,7 @@ LAUF_RUNTIME_BUILTIN(sabs_panic, 1, 1, panic_flags, "sabs_panic", &sabs_sat)
 {
     auto input = vstack_ptr[0].as_sint;
     if (input == INT64_MIN)
-        return lauf_runtime_panic(process, "integer overflow");
+        LAUF_BUILTIN_RETURN(lauf_runtime_panic(process, "integer overflow"));
     else if (input < 0)
         vstack_ptr[0].as_sint = -input;
 
@@ -530,9 +530,10 @@ LAUF_RUNTIME_BUILTIN(lauf_lib_int_uabs, 1, 1, no_panic_flags, "uabs", &sabs_pani
 namespace
 {
 template <typename Int>
-LAUF_RUNTIME_BUILTIN_IMPL bool load_int(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                        lauf_runtime_stack_frame* frame_ptr,
-                                        lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE load_int(const lauf_asm_inst*      ip,
+                                                            lauf_runtime_value*       vstack_ptr,
+                                                            lauf_runtime_stack_frame* frame_ptr,
+                                                            lauf_runtime_process*     process)
 {
     auto value = *static_cast<Int*>(vstack_ptr[1].as_native_ptr);
 
@@ -549,9 +550,10 @@ LAUF_RUNTIME_BUILTIN_IMPL bool load_int(const lauf_asm_inst* ip, lauf_runtime_va
 }
 
 template <typename Int>
-LAUF_RUNTIME_BUILTIN_IMPL bool store_int(const lauf_asm_inst* ip, lauf_runtime_value* vstack_ptr,
-                                         lauf_runtime_stack_frame* frame_ptr,
-                                         lauf_runtime_process*     process)
+LAUF_RUNTIME_BUILTIN_IMPL LAUF_BUILTIN_RETURN_TYPE store_int(const lauf_asm_inst*      ip,
+                                                             lauf_runtime_value*       vstack_ptr,
+                                                             lauf_runtime_stack_frame* frame_ptr,
+                                                             lauf_runtime_process*     process)
 {
     auto dest = static_cast<Int*>(vstack_ptr[1].as_native_ptr);
 
