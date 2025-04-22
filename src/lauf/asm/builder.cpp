@@ -373,7 +373,7 @@ LAUF_NOINLINE lauf_asm_inst* emit_body(lauf_asm_inst* ip, lauf_asm_builder* b,
         assert(insts[dest->offset].op() == lauf::asm_op::block);
         auto dest_offset = dest->offset + 1;
 
-        LAUF_BITFIELD_CONVERSION(jump->jump.offset = std::int32_t(dest_offset - cur_offset));
+        jump->jump.offset(std::int32_t(dest_offset - cur_offset));
     }
 
     return ip;
@@ -459,7 +459,7 @@ void emit_debug_location(lauf_asm_builder* b)
 
 bool lauf_asm_build_finish(lauf_asm_builder* b)
 {
-    constexpr auto context = LAUF_BUILD_ASSERT_CONTEXT;
+    static constexpr auto context = LAUF_BUILD_ASSERT_CONTEXT;
 
     auto insts = [&] {
         auto inst_count = estimate_inst_count(context, b);
@@ -673,7 +673,7 @@ const lauf_asm_block* lauf_asm_inst_branch(lauf_asm_builder* b, const lauf_asm_b
     else if (!b->cur->insts.empty() && b->cur->insts.back().op() == lauf::asm_op::cc)
     {
         // Remove the cc instruction.
-        auto cc = b->cur->insts.back().cc.value;
+        auto cc = b->cur->insts.back().cc.value();
         b->cur->insts.pop_back();
 
         switch (cc)

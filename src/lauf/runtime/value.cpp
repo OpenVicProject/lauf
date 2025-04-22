@@ -4,4 +4,3 @@
 #include <lauf/runtime/value.h>
 
 static_assert(sizeof(lauf_runtime_value) == sizeof(uint64_t));
-

@@ -53,7 +53,7 @@ void lauf::debug_print_cstack(lauf_runtime_process* process, const lauf_runtime_
         else
         {
             auto addr = lauf_asm_get_instruction_index(fn, ip);
-            std::fprintf(stderr, "       at <%04lx>\n", addr);
+            std::fprintf(stderr, "       at <%04zx>\n", addr);
         }
 
         ++index;

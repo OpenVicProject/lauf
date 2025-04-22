@@ -14,9 +14,9 @@ typedef struct lauf_runtime_address
     // acess to allocation is an AND, acess to offset a SHIFT, access to generation SHIFT + AND
     // (which is the one only necessary for checks). In addition, treating it as an integer and e.g.
     // incrementing it changes allocation first, not offset. That way, bugs are caught earlier.
-    uint64_t allocation : 30;
-    uint64_t generation : 2;
-    uint64_t offset : 32;
+    uint32_t allocation : 30;
+    uint32_t generation : 2;
+    uint32_t offset;
 } lauf_runtime_address;
 
 static const lauf_runtime_address lauf_runtime_address_null = {0x3FFFFFFF, 0x3, 0xFFFFFFFF};
@@ -43,4 +43,3 @@ typedef union lauf_runtime_value
 LAUF_HEADER_END
 
 #endif // LAUF_RUNTIME_VALUE_H_INCLUDED
-

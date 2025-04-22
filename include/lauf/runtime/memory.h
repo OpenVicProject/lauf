@@ -162,4 +162,3 @@ bool lauf_runtime_undeclare_weak(lauf_runtime_process* p, lauf_runtime_address a
 LAUF_HEADER_END
 
 #endif // LAUF_RUNTIME_MEMORY_H_INCLUDED
-

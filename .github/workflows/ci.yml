@@ -37,3 +37,53 @@ jobs:
       working-directory: build/
       run: ctest --output-on-failure
 
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+
+    runs-on: windows-2022
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Create Build Environment
+      run: cmake -E make_directory build
+
+    - name: Install Chocolatey and YASM
+      uses: crazy-max/ghaction-chocolatey@v3
+      with:
+        args: install yasm -y
+    - name: Verify YASM Installation
+      run: yasm --version
+
+    - name: Set up MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: make mingw-w64-x86_64-gcc mingw-w64-x86_64-gdb
+    - name: Download QBE
+      shell: msys2 {0}
+      run: curl https://c9x.me/compile/release/qbe-1.0.tar.xz -o qbe.tar.xz && tar xf qbe.tar.xz
+    - name: Build QBE
+      working-directory: qbe-1.0/
+      shell: msys2 {0}
+      run: |
+        make CC="cc" CFLAGS="-std=c99 -g -Wall -Wextra -Wpedantic -O2 -static"
+        mv qbe $GITHUB_WORKSPACE/qbe.exe
+        echo "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+    - name: Verify QBE Outside MSYS2
+      run: qbe.exe -h
+
+    - name: Configure
+      shell: bash
+      working-directory: build/
+      run: cmake $GITHUB_WORKSPACE -G"Visual Studio 17 2022"
+    - name: Build
+      working-directory: build/
+      run: cmake --build . --config ${{matrix.build_type}}
+    - name: Test
+      working-directory: build/
+      run: ctest -C ${{matrix.build_type}} --output-on-failure
+

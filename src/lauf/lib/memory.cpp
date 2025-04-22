@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <lauf/asm/type.h>
+#include <lauf/compiler_instrinsics.hpp>
 #include <lauf/runtime/builtin.h>
 #include <lauf/runtime/memory.h>
 #include <lauf/runtime/process.h>
@@ -95,7 +96,7 @@ namespace
 std::uint32_t addr_offset(lauf_runtime_address addr, lauf_sint offset)
 {
     lauf_sint result;
-    auto      overflow = __builtin_add_overflow(lauf_sint(addr.offset), offset, &result);
+    auto      overflow = lauf_add_overflow(lauf_sint(addr.offset), offset, &result);
     if (LAUF_UNLIKELY(overflow || result < 0 || result > UINT32_MAX))
         result = UINT32_MAX;
 
